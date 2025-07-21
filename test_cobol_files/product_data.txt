@@ -1,0 +1,4 @@
+12345678Laptop Computer                     Electronics    125000001500001000123456A20240115
+87654321Wireless Mouse                      Electronics    002999000050000010123456A20240120
+11223344Office Chair                        Furniture      015000000075000025654321A20240118
+99887766Coffee Maker                        Appliances     008999000025000005789012D20240110
