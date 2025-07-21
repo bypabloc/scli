@@ -1,7 +1,13 @@
 import subprocess
 import socket
 import platform
+import sys
+import os
 from urllib.parse import urlparse
+
+# Add the src directory to path to import scli modules
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
+from scli.menu_utils import interactive_menu, text_input, confirm
 
 DESCRIPTION = "Network diagnostic tools - ping, port check, and DNS lookup"
 
@@ -10,48 +16,81 @@ def main():
     print("🌐 Network Tools")
     print("=" * 50)
     
+    # Define menu options
+    menu_options = [
+        {
+            'name': '🏓 Ping a host',
+            'value': 'ping',
+            'description': 'Test connectivity to a host',
+            'action': ping_host
+        },
+        {
+            'name': '🔍 Check if a port is open', 
+            'value': 'port',
+            'description': 'Check if a specific port is accessible',
+            'action': check_port
+        },
+        {
+            'name': '🌐 DNS lookup',
+            'value': 'dns', 
+            'description': 'Resolve domain names to IP addresses',
+            'action': dns_lookup
+        },
+        {
+            'name': '📡 Show network interfaces',
+            'value': 'interfaces',
+            'description': 'Display network interface information', 
+            'action': show_network_interfaces
+        },
+        {
+            'name': '👋 Exit',
+            'value': 'exit',
+            'description': 'Quit the network tools',
+            'action': None
+        }
+    ]
+    
     while True:
-        print("\nSelect a network tool:")
-        print("1. Ping a host")
-        print("2. Check if a port is open")
-        print("3. DNS lookup")
-        print("4. Show network interfaces")
-        print("5. Exit")
-        
         try:
-            choice = input("\nEnter your choice (1-5): ").strip()
+            print("\n" + "=" * 50)
+            selected = interactive_menu("Select a network tool:", menu_options)
             
-            if choice == "1":
-                ping_host()
-            elif choice == "2":
-                check_port()
-            elif choice == "3":
-                dns_lookup()
-            elif choice == "4":
-                show_network_interfaces()
-            elif choice == "5":
+            if not selected or selected['value'] == 'exit':
                 print("👋 Goodbye!")
                 break
-            else:
-                print("❌ Invalid choice. Please select 1-5.")
+                
+            # Execute the selected action
+            if selected['action']:
+                print(f"\n🔧 Running: {selected['name']}")
+                print("-" * 40)
+                selected['action']()
+                
+                # Ask if user wants to continue
+                if not confirm("\nWould you like to run another tool?", default=True):
+                    print("👋 Goodbye!")
+                    break
                 
         except KeyboardInterrupt:
             print("\n👋 Goodbye!")
             break
         except Exception as e:
             print(f"❌ Error: {e}")
+            if not confirm("Would you like to continue?", default=True):
+                break
 
 
 def ping_host():
     """Ping a host to check connectivity"""
-    host = input("Enter hostname or IP to ping: ").strip()
-    if not host:
+    host = text_input("Enter hostname or IP to ping:")
+    if not host or not host.strip():
         print("❌ Please enter a valid hostname or IP")
         return
     
+    host = host.strip()
+    
     # Determine ping command based on OS
     param = "-n" if platform.system().lower() == "windows" else "-c"
-    command = ["ping", param, "4", host]
+    command = ["ping", param, "1", host]
     
     try:
         print(f"\n🏓 Pinging {host}...")
@@ -59,10 +98,14 @@ def ping_host():
         
         if result.returncode == 0:
             print(f"✅ {host} is reachable")
-            # Show last line of ping output (summary)
+            # Show summary without full output
             lines = result.stdout.strip().split('\n')
-            if lines:
-                print(f"📊 {lines[-1]}")
+            if lines and len(lines) > 1:
+                # Show just the relevant stats line, not all output
+                for line in lines[-3:]:
+                    if 'time=' in line or 'packets transmitted' in line or 'packet loss' in line:
+                        print(f"📊 {line.strip()}")
+                        break
         else:
             print(f"❌ {host} is not reachable")
             
@@ -74,16 +117,29 @@ def ping_host():
 
 def check_port():
     """Check if a port is open on a host"""
-    host = input("Enter hostname or IP: ").strip()
-    if not host:
+    host = text_input("Enter hostname or IP:")
+    if not host or not host.strip():
         print("❌ Please enter a valid hostname or IP")
         return
     
+    host = host.strip()
+    
+    def validate_port(answers, current):
+        try:
+            port = int(current)
+            if not 1 <= port <= 65535:
+                raise ValueError("Port must be between 1 and 65535")
+            return True
+        except ValueError as e:
+            raise ValueError(str(e))
+    
+    port_str = text_input("Enter port number (1-65535):", validate=validate_port)
+    if not port_str:
+        print("❌ Port number is required")
+        return
+    
     try:
-        port = int(input("Enter port number: ").strip())
-        if not 1 <= port <= 65535:
-            print("❌ Port must be between 1 and 65535")
-            return
+        port = int(port_str.strip())
     except ValueError:
         print("❌ Please enter a valid port number")
         return
@@ -108,10 +164,12 @@ def check_port():
 
 def dns_lookup():
     """Perform DNS lookup for a domain"""
-    domain = input("Enter domain name: ").strip()
-    if not domain:
+    domain = text_input("Enter domain name:")
+    if not domain or not domain.strip():
         print("❌ Please enter a valid domain name")
         return
+    
+    domain = domain.strip()
     
     try:
         print(f"\n🔍 Looking up {domain}...")
