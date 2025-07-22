@@ -4,6 +4,7 @@ from rich.table import Table
 from rich.prompt import Prompt
 from typing import Optional
 from .script_loader import ScriptLoader
+from .menu_utils import interactive_menu
 
 app = typer.Typer(help="A CLI tool for executing selectable scripts", invoke_without_command=True)
 console = Console()
@@ -82,25 +83,45 @@ def run(script_name: Optional[str] = typer.Argument(None, help="Name of the scri
 
 
 def _interactive_selection(loader: ScriptLoader, scripts: dict):
-    """Show interactive script selection"""
+    """Show interactive script selection with arrow navigation and filtering"""
     console.print("\n[bold blue]Available Scripts:[/bold blue]")
     
-    script_list = list(scripts.keys())
-    for i, name in enumerate(script_list, 1):
-        console.print(f"  {i}. [cyan]{name}[/cyan] - {scripts[name]['description']}")
+    # Show appropriate instructions based on TTY availability
+    import sys
+    if sys.stdin.isatty():
+        console.print("[dim]Use arrow keys to navigate, type to filter, Enter to select, Ctrl+C to cancel[/dim]\n")
+    else:
+        console.print("[dim]Interactive mode not available - using numbered selection[/dim]\n")
+    
+    # Prepare menu choices
+    menu_choices = []
+    for name, info in scripts.items():
+        menu_choices.append({
+            'name': name,
+            'value': name,
+            'description': info['description']
+        })
+    
+    # Add exit option
+    menu_choices.append({
+        'name': '❌ Exit',
+        'value': 'exit',
+        'description': 'Quit without running a script'
+    })
     
     try:
-        choice = Prompt.ask(
-            "\nSelect a script to run",
-            choices=[str(i) for i in range(1, len(script_list) + 1)] + ["q"],
-            default="q"
+        # Show interactive menu with filtering support
+        selected = interactive_menu(
+            "Select a script to run:",
+            menu_choices,
+            allow_filter=True
         )
         
-        if choice.lower() == "q":
+        if not selected or selected['value'] == 'exit':
             console.print("[yellow]Cancelled[/yellow]")
             return
         
-        selected_script = script_list[int(choice) - 1]
+        selected_script = selected['value']
         console.print(f"\n[green]Executing script: {selected_script}[/green]")
         
         success = loader.execute_script(selected_script, scripts)
@@ -108,9 +129,6 @@ def _interactive_selection(loader: ScriptLoader, scripts: dict):
             console.print(f"[red]Failed to execute script: {selected_script}[/red]")
             raise typer.Exit(1)
             
-    except (ValueError, IndexError):
-        console.print("[red]Invalid selection[/red]")
-        raise typer.Exit(1)
     except KeyboardInterrupt:
         console.print("\n[yellow]Cancelled[/yellow]")
         raise typer.Exit(0)

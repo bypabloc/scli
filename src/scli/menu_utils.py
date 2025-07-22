@@ -25,6 +25,10 @@ def interactive_menu(title: str, choices: List[Dict[str, Any]],
     if not sys.stdin.isatty():
         return _fallback_menu(title, choices)
     
+    # For lists with filtering enabled (when more than 8 items), use enhanced filter
+    if allow_filter and len(choices) > 8:
+        return _interactive_menu_with_filter(title, choices)
+    
     # Prepare choices for inquirer
     inquirer_choices = []
     for choice in choices:
@@ -53,6 +57,81 @@ def interactive_menu(title: str, choices: List[Dict[str, Any]],
         # Fall back to simple menu on error
         print(f"⚠️  Interactive menu failed, using fallback: {e}")
         return _fallback_menu(title, choices)
+
+
+def _interactive_menu_with_filter(title: str, choices: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Interactive menu with text filtering capability for large lists"""
+    try:
+        # Create a list of display names with their corresponding choices
+        choice_map = {}
+        display_names = []
+        
+        for choice in choices:
+            display_name = choice.get('name', str(choice.get('value', 'Unknown')))
+            if 'description' in choice:
+                full_display = f"{display_name} - {choice['description']}"
+            else:
+                full_display = display_name
+            
+            # Store mapping and display name
+            choice_map[full_display] = choice
+            display_names.append(full_display)
+        
+        # For better UX, use standard list that shows all options
+        # inquirer.List already supports filtering by typing
+        inquirer_choices = []
+        for display_name, choice in zip(display_names, choices):
+            inquirer_choices.append((display_name, choice))
+        
+        print(f"\n💡 Tip: Start typing to filter options")
+        
+        question = inquirer.List(
+            'selection',
+            message=title,
+            choices=inquirer_choices,
+            carousel=True,  # Allow wrapping around
+        )
+        
+        try:
+            answer = inquirer.prompt([question])
+            if answer:
+                return answer['selection']
+            return None
+        except Exception:
+            # Fall back to standard list if this fails
+            return _interactive_menu_without_filter(title, choices)
+        
+    except KeyboardInterrupt:
+        print("\n👋 Operation cancelled")
+        return None
+    except Exception as e:
+        print(f"⚠️  Interactive menu failed, using fallback: {e}")
+        return _fallback_menu(title, choices)
+
+
+def _interactive_menu_without_filter(title: str, choices: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Standard interactive menu without filtering"""
+    inquirer_choices = []
+    for choice in choices:
+        display_name = choice.get('name', str(choice.get('value', 'Unknown')))
+        if 'description' in choice:
+            display_name = f"{display_name} - {choice['description']}"
+        inquirer_choices.append((display_name, choice))
+    
+    question = inquirer.List(
+        'selection',
+        message=title,
+        choices=inquirer_choices,
+        carousel=True
+    )
+    
+    try:
+        answer = inquirer.prompt([question])
+        if answer:
+            return answer['selection']
+        return None
+    except Exception:
+        return None
 
 
 def _fallback_menu(title: str, choices: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
