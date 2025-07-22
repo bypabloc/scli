@@ -91,33 +91,23 @@ def select_and_process_files():
     cpy_file = None
     txt_file = None
     
-    # Get .cpy file path
-    cpy_path = text_input("Enter path to .cpy file:")
-    if cpy_path and cpy_path.strip():
-        cpy_path = cpy_path.strip()
-        if validate_file_path(cpy_path, '.cpy'):
-            cpy_file = cpy_path
-            print(f"✅ CPY file selected: {cpy_file}")
-        else:
-            print(f"❌ Invalid .cpy file: {cpy_path}")
-            return
-    else:
-        print("❌ CPY file path is required")
+    # Get .cpy file path with browser
+    print("\n📄 Select .cpy file:")
+    cpy_file = browse_for_file('.cpy', "Select COBOL copybook file (.cpy)")
+    if not cpy_file:
+        print("❌ CPY file selection cancelled")
         return
+    print(f"✅ CPY file selected: {cpy_file}")
     
-    # Get .txt file path
-    txt_path = text_input("Enter path to .txt file:")
-    if txt_path and txt_path.strip():
-        txt_path = txt_path.strip()
-        if validate_file_path(txt_path, '.txt'):
-            txt_file = txt_path
-            print(f"✅ TXT file selected: {txt_file}")
-        else:
-            print(f"❌ Invalid .txt file: {txt_path}")
-            return
-    else:
-        print("❌ TXT file path is required")
+    # Get .txt file path with browser
+    print("\n📄 Select .txt file:")
+    # Start browsing from the same directory as the .cpy file
+    start_dir = os.path.dirname(cpy_file) if cpy_file else None
+    txt_file = browse_for_file('.txt', "Select data file (.txt)", start_dir)
+    if not txt_file:
+        print("❌ TXT file selection cancelled")
         return
+    print(f"✅ TXT file selected: {txt_file}")
     
     # Process the selected files
     if cpy_file and txt_file:
@@ -460,6 +450,113 @@ def parse_data_file(txt_file: str, fields: List[CobolField]):
         
     except Exception as e:
         print(f"❌ Error parsing data file: {e}")
+
+
+def browse_for_file(extension: str, title: str, start_dir: Optional[str] = None) -> Optional[str]:
+    """Interactive file browser to select a file with specific extension"""
+    current_dir = start_dir if start_dir and os.path.exists(start_dir) else os.getcwd()
+    
+    while True:
+        # Get directory contents
+        items = []
+        
+        # Add parent directory option
+        if current_dir != os.path.dirname(current_dir):  # Not at root
+            items.append({
+                'name': '📁 ..',
+                'value': '..',
+                'description': 'Parent directory',
+                'type': 'parent'
+            })
+        
+        # List directories and files
+        try:
+            entries = sorted(os.listdir(current_dir))
+            
+            # Add directories first
+            for entry in entries:
+                full_path = os.path.join(current_dir, entry)
+                if os.path.isdir(full_path):
+                    items.append({
+                        'name': f'📁 {entry}',
+                        'value': entry,
+                        'description': 'Directory',
+                        'type': 'dir'
+                    })
+            
+            # Add files with matching extension
+            for entry in entries:
+                full_path = os.path.join(current_dir, entry)
+                if os.path.isfile(full_path) and entry.lower().endswith(extension.lower()):
+                    file_size = format_file_size(os.path.getsize(full_path))
+                    items.append({
+                        'name': f'📄 {entry}',
+                        'value': entry,
+                        'description': f'File ({file_size})',
+                        'type': 'file'
+                    })
+            
+            # Add manual entry option
+            items.append({
+                'name': '✏️  Enter path manually',
+                'value': 'manual',
+                'description': 'Type the full file path',
+                'type': 'manual'
+            })
+            
+            # Add cancel option
+            items.append({
+                'name': '❌ Cancel',
+                'value': 'cancel',
+                'description': 'Cancel file selection',
+                'type': 'cancel'
+            })
+            
+            # Show current directory
+            print(f"\n📂 Current directory: {current_dir}")
+            
+            # Show menu
+            selected = interactive_menu(title, items)
+            
+            if not selected or selected['type'] == 'cancel':
+                return None
+            
+            if selected['type'] == 'manual':
+                # Manual path entry
+                manual_path = text_input(f"Enter full path to {extension} file:")
+                if manual_path and manual_path.strip():
+                    manual_path = manual_path.strip()
+                    if validate_file_path(manual_path, extension):
+                        return os.path.abspath(manual_path)
+                    else:
+                        print(f"❌ Invalid {extension} file: {manual_path}")
+                        if not confirm("Try again?", default=True):
+                            return None
+                        continue
+                else:
+                    if not confirm("Try again?", default=True):
+                        return None
+                    continue
+            
+            elif selected['type'] == 'parent':
+                # Go to parent directory
+                current_dir = os.path.dirname(current_dir)
+            
+            elif selected['type'] == 'dir':
+                # Enter directory
+                current_dir = os.path.join(current_dir, selected['value'])
+            
+            elif selected['type'] == 'file':
+                # File selected
+                file_path = os.path.join(current_dir, selected['value'])
+                return os.path.abspath(file_path)
+                
+        except PermissionError:
+            print(f"❌ Permission denied: {current_dir}")
+            current_dir = os.path.dirname(current_dir)
+        except Exception as e:
+            print(f"❌ Error browsing directory: {e}")
+            return None
 
 
 if __name__ == "__main__":
