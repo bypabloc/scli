@@ -9,6 +9,7 @@ from dataclasses import dataclass
 # Add the src directory to path to import scli modules  
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
 from scli.menu_utils import interactive_menu, text_input, confirm
+from scli.output_manager import OutputManager
 
 DESCRIPTION = "COBOL file processor - Process .cpy and .txt files to interpret data"
 
@@ -293,9 +294,11 @@ def format_file_size(size_bytes: int) -> str:
 
 
 def parse_cobol_copybook(cpy_file: str) -> List[CobolField]:
-    """Parse COBOL copybook and extract field definitions"""
+    """Parse COBOL copybook and extract field definitions with REDEFINES support"""
     fields = []
     current_position = 1
+    current_group_start = 1  # Track where current level 02 group starts
+    redefines_groups = {}  # Track REDEFINES relationships
     
     try:
         with open(cpy_file, 'r', encoding='utf-8') as f:
@@ -308,34 +311,60 @@ def parse_cobol_copybook(cpy_file: str) -> List[CobolField]:
             if not line or line.startswith('*') or line.startswith('      *'):
                 continue
             
-            # Look for field definitions (level number + name + PIC)
-            field_match = re.match(r'\s*(\d{2})\s+([A-Z0-9-]+)(?:\s+PIC\s+([X9V()0-9]+))?\s*\.?', line, re.IGNORECASE)
+            # Look for field definitions with optional REDEFINES clause
+            field_match = re.match(r'\s*(\d{2})\s+([A-Z0-9-]+)(?:\s+REDEFINES\s+([A-Z0-9-]+))?(?:\s+PIC\s+([X9V()0-9]+))?\s*\.?', line, re.IGNORECASE)
             
             if field_match:
                 level = int(field_match.group(1))
                 name = field_match.group(2)
-                picture = field_match.group(3)
+                redefines_target = field_match.group(3)
+                picture = field_match.group(4)
                 
-                # Calculate field length and type from PIC clause
+                # Determine starting position for this field
+                field_start_pos = current_position
+                
+                # Handle different level types
+                if level == 2:  # Level 02 - main record structures
+                    if redefines_target:
+                        # REDEFINES: Start at position 1 (redefining the first structure)
+                        field_start_pos = 1
+                        current_group_start = 1
+                        current_position = 1
+                        redefines_groups[name] = redefines_target
+                        print(f"🔄 REDEFINES detected: {name} redefines {redefines_target} at position 1")
+                    else:
+                        # First/main structure: starts at position 1
+                        field_start_pos = 1
+                        current_group_start = 1
+                        current_position = 1
+                elif level >= 5:  # Child fields (05, 10, etc.)
+                    # Child fields continue from current position within the group
+                    field_start_pos = current_position
+                
+                # Create the field object
                 if picture:
+                    # Elementary field with PIC clause
                     field_length, field_type = parse_picture_clause(picture)
                     field = CobolField(
                         level=level,
                         name=name,
                         picture=picture,
-                        start_pos=current_position,
+                        start_pos=field_start_pos,
                         length=field_length,
                         field_type=field_type
                     )
                     fields.append(field)
-                    current_position += field_length
+                    
+                    # Advance position only for elementary fields
+                    if level >= 5:
+                        current_position += field_length
                 else:
                     # Group field (no PIC clause)
                     field = CobolField(
                         level=level,
                         name=name,
                         picture=None,
-                        start_pos=current_position,
+                        start_pos=field_start_pos,
                         length=0,  # Will be calculated based on children
                         field_type='group'
                     )
@@ -344,6 +373,30 @@ def parse_cobol_copybook(cpy_file: str) -> List[CobolField]:
     except Exception as e:
         print(f"❌ Error parsing COBOL copybook: {e}")
         return []
+    
+    # Post-process: Calculate group lengths and show REDEFINES relationships
+    if redefines_groups:
+        print(f"\n📋 REDEFINES relationships found:")
+        for redefining, redefined in redefines_groups.items():
+            print(f"  • {redefining} REDEFINES {redefined}")
+    
+    # Calculate total lengths for each group
+    print(f"\n📏 Structure lengths:")
+    current_group = None
+    group_max_pos = 0
+    
+    for field in fields:
+        if field.level == 2:
+            if current_group:
+                print(f"  • {current_group}: {group_max_pos} bytes")
+            current_group = field.name
+            group_max_pos = 0
+        elif field.picture and field.length > 0:
+            field_end = field.start_pos + field.length - 1
+            group_max_pos = max(group_max_pos, field_end)
+    
+    if current_group:
+        print(f"  • {current_group}: {group_max_pos} bytes")
     
     return fields
 
@@ -601,18 +654,25 @@ def export_to_csv(parsed_data: Dict[str, Any], fields: List[CobolField], origina
         if not separator:
             separator = ";"
         
-        # Generate output filename
-        base_name = os.path.splitext(os.path.basename(original_file))[0]
-        output_file = f"{base_name}_export.csv"
+        # Generate default filename with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        default_filename = f"{timestamp}.csv"
         
         # Ask if user wants to change output filename
-        custom_name = text_input(f"Output filename (default: {output_file}):", default=output_file)
+        custom_name = text_input(f"Output filename (default: {default_filename}):", default=default_filename)
         if custom_name and custom_name.strip():
-            output_file = custom_name.strip()
+            output_filename = custom_name.strip()
+        else:
+            output_filename = default_filename
         
         # Ensure .csv extension
-        if not output_file.lower().endswith('.csv'):
-            output_file += '.csv'
+        if not output_filename.lower().endswith('.csv'):
+            output_filename += '.csv'
+        
+        # Use OutputManager to get the full path (no subfolder)
+        output_manager = OutputManager()
+        output_file = output_manager.get_output_path('cobol_processor', output_filename, subfolder="")
         
         # Get data
         records_by_type = parsed_data['records_by_type']
@@ -689,6 +749,7 @@ def export_to_csv(parsed_data: Dict[str, Any], fields: List[CobolField], origina
         # Show file size
         file_size = os.path.getsize(output_file)
         print(f"📏 Output file size: {format_file_size(file_size)}")
+        print(f"\n📂 Full path: {output_file.absolute()}")
         
         # Calculate actual record type breakdown from all processed records
         print(f"\n📋 Analyzing record type distribution...")

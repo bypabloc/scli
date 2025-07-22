@@ -85,7 +85,13 @@ def run(script_name: Optional[str] = typer.Argument(None, help="Name of the scri
 def _interactive_selection(loader: ScriptLoader, scripts: dict):
     """Show interactive script selection with arrow navigation and filtering"""
     console.print("\n[bold blue]Available Scripts:[/bold blue]")
-    console.print("[dim]Use arrow keys to navigate, type to filter, Enter to select, Ctrl+C to cancel[/dim]\n")
+    
+    # Show appropriate instructions based on TTY availability
+    import sys
+    if sys.stdin.isatty():
+        console.print("[dim]Use arrow keys to navigate, type to filter, Enter to select, Ctrl+C to cancel[/dim]\n")
+    else:
+        console.print("[dim]Interactive mode not available - using numbered selection[/dim]\n")
     
     # Prepare menu choices
     menu_choices = []

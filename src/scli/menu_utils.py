@@ -25,8 +25,8 @@ def interactive_menu(title: str, choices: List[Dict[str, Any]],
     if not sys.stdin.isatty():
         return _fallback_menu(title, choices)
     
-    # For lists with filtering enabled (when more than 3 items), use fuzzy finder
-    if allow_filter and len(choices) > 3:
+    # For lists with filtering enabled (when more than 8 items), use enhanced filter
+    if allow_filter and len(choices) > 8:
         return _interactive_menu_with_filter(title, choices)
     
     # Prepare choices for inquirer
@@ -77,33 +77,28 @@ def _interactive_menu_with_filter(title: str, choices: List[Dict[str, Any]]) -> 
             choice_map[full_display] = choice
             display_names.append(full_display)
         
+        # For better UX, use standard list that shows all options
+        # inquirer.List already supports filtering by typing
+        inquirer_choices = []
+        for display_name, choice in zip(display_names, choices):
+            inquirer_choices.append((display_name, choice))
+        
         print(f"\n💡 Tip: Start typing to filter options")
         
-        # Try to use text input with autocomplete for filtering
+        question = inquirer.List(
+            'selection',
+            message=title,
+            choices=inquirer_choices,
+            carousel=True,  # Allow wrapping around
+        )
+        
         try:
-            # Use Text with autocomplete for searchable selection
-            question = inquirer.Text(
-                'selection',
-                message=title,
-                autocomplete=lambda _, current: [
-                    name for name in display_names 
-                    if current.lower() in name.lower()
-                ]
-            )
-            
             answer = inquirer.prompt([question])
-            if answer and answer['selection'] in choice_map:
-                return choice_map[answer['selection']]
-            elif answer:
-                # If exact match not found, try to find closest match
-                search_term = answer['selection'].lower()
-                for display_name in display_names:
-                    if search_term in display_name.lower():
-                        return choice_map[display_name]
+            if answer:
+                return answer['selection']
             return None
-            
         except Exception:
-            # Fall back to standard list if text with autocomplete fails
+            # Fall back to standard list if this fails
             return _interactive_menu_without_filter(title, choices)
         
     except KeyboardInterrupt:
