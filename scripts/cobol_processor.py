@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import csv
 from pathlib import Path
 from typing import Optional, List, Tuple, Dict, Any
 from dataclasses import dataclass
@@ -260,7 +261,11 @@ def process_files(cpy_file: str, txt_file: str):
             # Parse data file using the structure
             if confirm("\nWould you like to parse the data file using this structure?", default=True):
                 print(f"\n🔄 Parsing data file...")
-                parse_data_file(txt_file, fields)
+                parsed_records = parse_data_file(txt_file, fields)
+                
+                # Offer CSV export
+                if parsed_records and confirm("\nWould you like to export the data to CSV?", default=True):
+                    export_to_csv(parsed_records, fields, txt_file)
         else:
             print("❌ Could not parse COBOL copybook structure")
         
@@ -406,50 +411,301 @@ def display_cobol_structure(fields: List[CobolField]):
 def parse_data_file(txt_file: str, fields: List[CobolField]):
     """Parse fixed-width data file using COBOL field definitions"""
     try:
-        with open(txt_file, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
+        # Try different encodings commonly used in COBOL systems
+        encodings_to_try = ['utf-8', 'latin-1', 'cp1252', 'ascii']
+        lines = None
+        used_encoding = None
+        
+        for encoding in encodings_to_try:
+            try:
+                with open(txt_file, 'r', encoding=encoding) as f:
+                    lines = f.readlines()
+                    used_encoding = encoding
+                    break
+            except UnicodeDecodeError:
+                continue
+        
+        if lines is None:
+            print("❌ Could not decode file with any supported encoding")
+            return
+            
+        print(f"📖 File decoded using: {used_encoding}")
         
         if not lines:
             print("❌ Data file is empty")
             return
         
-        print(f"\n📊 Parsing {len(lines)} data records:")
+        print(f"\n📊 Analyzing {len(lines)} data records...")
         print("-" * 60)
         
-        # Parse only elementary fields (those with PIC clauses)
-        elementary_fields = [f for f in fields if f.picture is not None]
+        # Group fields by record type (level 01/02 groups or single structure)
+        record_types = {}
+        current_group = None
         
-        for i, line in enumerate(lines[:5], 1):  # Show first 5 records
+        # Look for level 01 or 02 groups
+        for field in fields:
+            if field.level in [1, 2]:  # New record type (level 01 or 02)
+                current_group = field.name
+                record_types[current_group] = []
+            elif current_group and field.picture is not None:
+                record_types[current_group].append(field)
+        
+        # If no groups found, create a single default group
+        if not record_types:
+            elementary_fields = [f for f in fields if f.picture is not None]
+            if elementary_fields:
+                record_types['DEFAULT_RECORD'] = elementary_fields
+        
+        print(f"📋 Found {len(record_types)} record types:")
+        for record_type in record_types.keys():
+            print(f"  • {record_type}")
+        
+        # Parse records and detect type by first character or pattern
+        records_by_type = {}
+        
+        for i, line in enumerate(lines[:10]):  # Analyze first 10 records
             line = line.rstrip('\n\r')
-            print(f"\n📄 Record {i}:")
+            if not line:
+                continue
+                
+            # Try to determine record type
+            record_type = detect_record_type(line, record_types)
             
-            current_pos = 0
-            for field in elementary_fields:
-                if current_pos < len(line):
-                    field_value = line[current_pos:current_pos + field.length].strip()
-                    
-                    # Format value based on field type
-                    if field.field_type == 'numeric' and 'V' in (field.picture or ''):
-                        # Handle decimal implied by V
-                        try:
-                            v_pos = field.picture.find('V')
-                            decimal_places = field.picture[v_pos+1:].count('9')
-                            if decimal_places > 0:
-                                numeric_val = float(field_value) / (10 ** decimal_places)
-                                field_value = f"{numeric_val:.{decimal_places}f}"
-                        except:
-                            pass
-                    
-                    print(f"  {field.name}: {field_value}")
-                    current_pos += field.length
+            if record_type not in records_by_type:
+                records_by_type[record_type] = []
+            records_by_type[record_type].append((i+1, line))
         
-        if len(lines) > 5:
-            print(f"\n... and {len(lines) - 5} more records")
+        # Show samples of each record type
+        for record_type, records in records_by_type.items():
+            if not records:
+                continue
+                
+            print(f"\n🔍 {record_type} Records (showing first 2):")
+            print("-" * 50)
+            
+            field_list = record_types.get(record_type, [])
+            
+            for record_num, line in records[:2]:
+                print(f"\n📄 Record #{record_num}:")
+                
+                for field in field_list[:10]:  # Show first 10 fields
+                    if field.start_pos <= len(line):
+                        start_pos = field.start_pos - 1  # Convert to 0-based
+                        end_pos = start_pos + field.length
+                        field_value = line[start_pos:end_pos].strip()
+                        
+                        # Format numeric fields with decimals
+                        if field.field_type == 'numeric' and 'V' in (field.picture or ''):
+                            field_value = format_numeric_field(field_value, field.picture)
+                        
+                        print(f"  {field.name}: '{field_value}'")
+                
+                if len(field_list) > 10:
+                    print(f"  ... and {len(field_list) - 10} more fields")
         
-        print(f"\n✅ Successfully parsed {len(lines)} records!")
+        total_records = len([line for line in lines if line.strip()])
+        print(f"\n✅ Successfully analyzed {total_records} records!")
+        
+        # Return parsed data for CSV export
+        return {
+            'records_by_type': records_by_type,
+            'record_types': record_types,
+            'all_lines': lines,
+            'encoding': used_encoding
+        }
         
     except Exception as e:
         print(f"❌ Error parsing data file: {e}")
+        return None
+
+
+def detect_record_type(line: str, record_types: Dict[str, Any]) -> str:
+    """Detect the type of record based on the first character or pattern"""
+    if not line:
+        return "UNKNOWN"
+    
+    # If only one record type exists, return it (simple copybook case)
+    if len(record_types) == 1:
+        return list(record_types.keys())[0]
+    
+    # Common COBOL pattern: first character indicates record type
+    first_char = line[0] if line else ""
+    
+    # Map common patterns to record types
+    type_patterns = {
+        '1': 'UGEC-CAB-RECAUDAC',  # Header record
+        '2': 'UGEC-DET-RECAUDAC',  # Detail record  
+        '9': 'UGEC-TOT-RECAUDAC'   # Total record
+    }
+    
+    detected_type = type_patterns.get(first_char)
+    
+    # If pattern matches a known record type, return it
+    if detected_type and detected_type in record_types:
+        return detected_type
+    
+    # Otherwise, try to find the best match by length
+    line_length = len(line.rstrip())
+    best_match = "UNKNOWN"
+    best_score = 0
+    
+    for record_type, fields in record_types.items():
+        if fields:
+            # Calculate expected length for this record type
+            max_pos = max((f.start_pos + f.length - 1) for f in fields)
+            length_diff = abs(line_length - max_pos)
+            score = 1000 - length_diff  # Closer length = higher score
+            
+            if score > best_score:
+                best_score = score
+                best_match = record_type
+    
+    return best_match if best_match != "UNKNOWN" else list(record_types.keys())[0]
+
+
+def format_numeric_field(value: str, picture: str) -> str:
+    """Format a numeric field value according to its PICTURE clause"""
+    if not value or not picture:
+        return value
+    
+    try:
+        # Remove non-numeric characters for processing
+        clean_value = ''.join(c for c in value if c.isdigit())
+        if not clean_value:
+            return value
+        
+        # Check if field has decimal places
+        if 'V' in picture:
+            v_pos = picture.find('V')
+            decimal_part = picture[v_pos+1:]
+            decimal_places = decimal_part.count('9')
+            
+            if decimal_places > 0:
+                # Convert to float with proper decimal places
+                numeric_val = float(clean_value) / (10 ** decimal_places)
+                return f"{numeric_val:.{decimal_places}f}"
+        
+        return clean_value
+    except:
+        return value
+
+
+def export_to_csv(parsed_data: Dict[str, Any], fields: List[CobolField], original_file: str):
+    """Export parsed COBOL data to CSV format"""
+    try:
+        print(f"\n📤 CSV Export")
+        print("=" * 30)
+        
+        # Ask for separator
+        separator = text_input("Enter CSV separator (default: ';'):", default=";")
+        if not separator:
+            separator = ";"
+        
+        # Generate output filename
+        base_name = os.path.splitext(os.path.basename(original_file))[0]
+        output_file = f"{base_name}_export.csv"
+        
+        # Ask if user wants to change output filename
+        custom_name = text_input(f"Output filename (default: {output_file}):", default=output_file)
+        if custom_name and custom_name.strip():
+            output_file = custom_name.strip()
+        
+        # Ensure .csv extension
+        if not output_file.lower().endswith('.csv'):
+            output_file += '.csv'
+        
+        # Get data
+        records_by_type = parsed_data['records_by_type']
+        record_types = parsed_data['record_types']
+        all_lines = parsed_data['all_lines']
+        encoding = parsed_data['encoding']
+        
+        print(f"\n🔄 Processing all {len(all_lines)} records...")
+        
+        # Create CSV with all records
+        with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
+            
+            # Collect all unique fields from all record types
+            all_fields = {}
+            for record_type, field_list in record_types.items():
+                for field in field_list:
+                    if field.picture:  # Only elementary fields
+                        all_fields[field.name] = field
+            
+            # Create header row
+            header = ['RECORD_TYPE', 'RECORD_NUMBER'] + list(all_fields.keys())
+            
+            writer = csv.writer(csvfile, delimiter=separator, quoting=csv.QUOTE_MINIMAL)
+            writer.writerow(header)
+            
+            # Process all lines
+            records_written = 0
+            for line_num, line in enumerate(all_lines, 1):
+                line = line.rstrip('\n\r')
+                if not line.strip():
+                    continue
+                
+                # Detect record type
+                record_type = detect_record_type(line, record_types)
+                
+                # Create row data
+                row_data = [record_type, line_num]
+                
+                # Extract field values
+                field_list = record_types.get(record_type, [])
+                field_values = {}
+                
+                # Parse fields for this record type
+                for field in field_list:
+                    if field.picture and field.start_pos <= len(line):
+                        start_pos = field.start_pos - 1  # Convert to 0-based
+                        end_pos = start_pos + field.length
+                        field_value = line[start_pos:end_pos].strip()
+                        
+                        # Format numeric fields
+                        if field.field_type == 'numeric' and 'V' in (field.picture or ''):
+                            field_value = format_numeric_field(field_value, field.picture)
+                        
+                        field_values[field.name] = field_value
+                
+                # Add values for all possible fields (fill missing with empty)
+                for field_name in all_fields.keys():
+                    row_data.append(field_values.get(field_name, ''))
+                
+                writer.writerow(row_data)
+                records_written += 1
+                
+                # Show progress for large files
+                if records_written % 5000 == 0:
+                    print(f"  📝 Processed {records_written} records...")
+        
+        # Show statistics
+        print(f"\n✅ CSV Export Complete!")
+        print(f"📁 Output file: {output_file}")
+        print(f"📊 Records exported: {records_written}")
+        print(f"📋 Fields included: {len(all_fields)}")
+        print(f"🔢 Separator used: '{separator}'")
+        
+        # Show file size
+        file_size = os.path.getsize(output_file)
+        print(f"📏 Output file size: {format_file_size(file_size)}")
+        
+        # Calculate actual record type breakdown from all processed records
+        print(f"\n📋 Analyzing record type distribution...")
+        type_counts = {}
+        for line in all_lines:
+            if line.strip():
+                record_type = detect_record_type(line, record_types)
+                type_counts[record_type] = type_counts.get(record_type, 0) + 1
+        
+        if type_counts:
+            print(f"\n📋 Record types exported:")
+            for record_type, count in sorted(type_counts.items()):
+                percentage = (count / records_written) * 100 if records_written > 0 else 0
+                print(f"  • {record_type}: {count:,} records ({percentage:.1f}%)")
+        
+    except Exception as e:
+        print(f"❌ Error exporting to CSV: {e}")
 
 
 def browse_for_file(extension: str, title: str, start_dir: Optional[str] = None) -> Optional[str]:
