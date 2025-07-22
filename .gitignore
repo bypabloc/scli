@@ -55,3 +55,10 @@ htmlcov/
 
 # uv
 .uv/
+
+# Test files
+test_cobol_files/
+*.csv
+
+# Output directory
+output/
