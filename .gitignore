@@ -62,3 +62,10 @@ test_cobol_files/
 
 # Output directory
 output/
+
+# Configuration files
+config*.yml
+
+*.pdf
+
+*.log
