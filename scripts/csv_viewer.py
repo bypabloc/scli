@@ -20,8 +20,6 @@ try:
     from textual.app import App, ComposeResult
     from textual.binding import Binding
     from textual.containers import Container, Horizontal, ScrollableContainer, Vertical
-    from textual.reactive import reactive
-    from textual.screen import Screen
     from textual.widgets import (
         Button,
         Checkbox,
@@ -31,9 +29,8 @@ try:
         Input,
         Label,
         LoadingIndicator,
-        Static,
     )
-    from textual.worker import Worker, get_current_worker
+    from textual.worker import get_current_worker
 except ImportError:
     print("❌ Error: textual library is required for CSV viewer")
     print("Please install it with: pip install textual pandas")

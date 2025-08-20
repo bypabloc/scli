@@ -29,7 +29,7 @@ def get_pdf_libraries_status() -> Dict[str, bool]:
     }
 
     try:
-        import PyPDF2
+        pass
 
         libraries["PyPDF2"] = True
     except ImportError:
@@ -43,21 +43,21 @@ def get_pdf_libraries_status() -> Dict[str, bool]:
         pass
 
     try:
-        from pdf2image import convert_from_path
+        pass
 
         libraries["pdf2image"] = True
     except ImportError:
         pass
 
     try:
-        from PIL import Image
+        pass
 
         libraries["Pillow"] = True
     except ImportError:
         pass
 
     try:
-        import pdfplumber
+        pass
 
         libraries["pdfplumber"] = True
     except ImportError:
@@ -249,7 +249,7 @@ def pdf_to_images_pymupdf(
             pix = page.get_pixmap(matrix=mat)
 
             # Convert to PIL Image
-            img_data = pix.tobytes("ppm")
+            pix.tobytes("ppm")
             pil_image = Image.open(
                 tempfile.NamedTemporaryFile(suffix=".ppm", delete=False)
             )

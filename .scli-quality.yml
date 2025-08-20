@@ -1,6 +1,19 @@
 # SCLI Code Quality Configuration - Modern Python 2025 Best Practices
-# This file configures the code_quality_checker script behavior
+# This file configures code quality and formatting tools for the SCLI project
 # Based on PEP 8, Black compatibility, and modern tooling standards
+#
+# USAGE:
+# ======
+# This configuration file is used by two main scripts:
+#
+# 1. scripts/code_quality_checker.py - Check code quality and style issues
+#    Usage: uv run python scripts/code_quality_checker.py --mode all
+#
+# 2. scripts/code_formatter.py - Automatically format code
+#    Usage: uv run python scripts/code_formatter.py --mode all
+#
+# Both scripts read their settings from this file, ensuring consistent
+# code quality standards across the project.
 
 # PyCodeStyle configuration - Complete options reference
 pycodestyle:
@@ -257,6 +270,46 @@ git:
   
   # Include untracked files when using 'all' mode
   include_untracked: true
+
+# ==========================================
+# FORMAT ACTIONS CONFIGURATION (for code_formatter.py)
+# ==========================================
+# This section controls specific formatting actions to apply
+# Enable/disable individual formatting features as needed
+
+format:
+  # IMPORT MANAGEMENT
+  sort_imports: true              # Sort imports alphabetically
+  group_imports: true             # Group imports by type (stdlib, third-party, local)
+  remove_unused_imports: true     # Remove imports that are not used
+  single_line_imports: false      # Force one import per line
+  
+  # CODE FORMATTING
+  fix_indentation: true           # Fix indentation to 4 spaces
+  normalize_strings: true         # Convert strings to consistent quotes (")
+  fix_line_length: true           # Break long lines (max 88 chars)
+  remove_trailing_spaces: true    # Remove trailing whitespace
+  add_trailing_comma: true        # Add trailing commas in multiline
+  
+  # WHITESPACE & SPACING
+  fix_whitespace: true            # Fix whitespace around operators
+  remove_blank_lines: true        # Remove excessive blank lines
+  ensure_newline_eof: true        # Ensure newline at end of file
+  spaces_around_operators: true   # Ensure proper spacing around operators
+  
+  # STATEMENT FORMATTING
+  break_long_lines: true          # Break long statements properly
+  fix_continuation_lines: true    # Fix line continuation indentation
+  format_docstrings: true         # Format docstrings to PEP 257
+  
+  # SPECIFIC FIXES
+  remove_print_statements: false  # Remove print() statements (use with caution)
+  convert_tabs_to_spaces: true    # Replace tabs with spaces
+  fix_encoding_declaration: true  # Add/fix encoding declaration if needed
+  
+  # Advanced options
+  max_line_length: 88             # Maximum line length (Black standard)
+  indent_size: 4                  # Number of spaces for indentation
 
 # ==========================================
 # EXTERNAL TOOLS INTEGRATION (2025 Modern Recommendations)

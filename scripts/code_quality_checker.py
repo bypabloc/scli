@@ -741,16 +741,17 @@ def main():
     if not pycodestyle:
         print("❌ Error: pycodestyle is required for this script")
         print("📦 Install with: pip install pycodestyle")
-        if __name__ == "__main__":
-            sys.exit(1)
-        else:
-            return
+        sys.exit(1)
 
-    # Parse command line arguments only if run directly
-    if __name__ == "__main__":
+    # Always parse command line arguments
+    # When called from SCLI, sys.argv will be set properly by the script loader
+    try:
         args = parse_arguments()
-    else:
-        # Create dummy args when run through SCLI
+    except SystemExit as e:
+        # argparse calls sys.exit() on error or help, re-raise it
+        raise
+    except Exception:
+        # If parsing fails for any other reason, use defaults
         args = argparse.Namespace(
             mode=None, verbose=False, no_verbose=False, config=None
         )
@@ -788,7 +789,7 @@ def main():
     else:
         interactive_mode = True
         # Get default mode from config
-        default_mode = config.get("default_mode", "all")
+        config.get("default_mode", "all")
 
         # Ask for evaluation mode if not specified
         modes = [
@@ -810,10 +811,7 @@ def main():
         selected_mode = simple_menu("Select evaluation mode:", modes)
         if selected_mode is None:
             print("Operation cancelled.")
-            if __name__ == "__main__":
-                sys.exit(0)
-            else:
-                return
+            sys.exit(0)
 
         mode = mode_mapping[selected_mode]
 
@@ -863,14 +861,12 @@ def main():
         print(
             f"\n❌ Quality check failed: {total_errors} errors exceed limit of {max_total_errors}"
         )
-        if __name__ == "__main__":
-            sys.exit(1)
+        sys.exit(1)
     else:
         print(
             f"\n✅ Quality check passed: {total_errors} errors within limit of {max_total_errors}"
         )
-        if __name__ == "__main__":
-            sys.exit(0)
+        sys.exit(0)
 
 
 if __name__ == "__main__":

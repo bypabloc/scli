@@ -49,14 +49,26 @@ class ScriptLoader:
         }
 
     def execute_script(
-        self, script_name: str, scripts: Dict[str, Dict[str, Any]]
+        self, script_name: str, scripts: Dict[str, Dict[str, Any]], args: list = None
     ) -> bool:
         if script_name not in scripts:
             return False
 
         try:
-            scripts[script_name]["main_func"]()
-            return True
+            # Set sys.argv for the script to use argparse
+            import sys
+            original_argv = sys.argv.copy()
+            
+            # Set the script name as argv[0] and pass remaining arguments
+            script_path = scripts[script_name]["path"]
+            sys.argv = [str(script_path)] + (args or [])
+            
+            try:
+                scripts[script_name]["main_func"]()
+                return True
+            finally:
+                # Restore original argv
+                sys.argv = original_argv
         except Exception as e:
             print(f"Error executing script {script_name}: {e}")
             return False

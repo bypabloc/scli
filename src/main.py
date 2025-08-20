@@ -8,7 +8,9 @@ from .menu_utils import interactive_menu
 from .script_loader import ScriptLoader
 
 app = typer.Typer(
-    help="A CLI tool for executing selectable scripts", invoke_without_command=True
+    help="A CLI tool for executing selectable scripts", 
+    invoke_without_command=True,
+    context_settings={"allow_extra_args": True, "allow_interspersed_args": False}
 )
 console = Console()
 
@@ -32,7 +34,9 @@ def main(
         if script:
             if script in scripts:
                 console.print(f"[green]Executing script: {script}[/green]")
-                success = loader.execute_script(script, scripts)
+                # Use Typer's context to get extra arguments
+                script_args = ctx.args
+                success = loader.execute_script(script, scripts, script_args)
                 if not success:
                     console.print(f"[red]Failed to execute script: {script}[/red]")
                     raise typer.Exit(1)
@@ -63,8 +67,9 @@ def list_scripts():
     console.print(table)
 
 
-@app.command()
+@app.command(context_settings={"allow_extra_args": True, "allow_interspersed_args": False})
 def run(
+    ctx: typer.Context,
     script_name: Optional[str] = typer.Argument(None, help="Name of the script to run"),
 ):
     """Run a script by name, or show interactive selection"""
@@ -78,7 +83,10 @@ def run(
     if script_name:
         if script_name in scripts:
             console.print(f"[green]Executing script: {script_name}[/green]")
-            success = loader.execute_script(script_name, scripts)
+            # Pass remaining arguments to the script
+            import sys
+            script_args = ctx.args
+            success = loader.execute_script(script_name, scripts, script_args)
             if not success:
                 console.print(f"[red]Failed to execute script: {script_name}[/red]")
                 raise typer.Exit(1)

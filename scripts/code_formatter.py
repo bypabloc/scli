@@ -6,12 +6,12 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 from menu_utils import confirm, simple_menu
 
-DESCRIPTION = "🎨 Auto-format Python code using Black, isort, Ruff and other tools"
+DESCRIPTION = "🎨 Auto-format Python code based on specific formatting actions"
 
 try:
     import yaml
@@ -28,29 +28,34 @@ class CodeFormatterConfig:
     def _load_config(self, config_file: Optional[Path]) -> Dict[str, Any]:
         """Load configuration from YAML file."""
         default_config = {
-            "pycodestyle": {
-                "ignore": [
-                    "E203",
-                    "W503",
-                    "W504",
-                    "E501",
-                    "E701",
-                    "E731",
-                    "E121",
-                    "E123",
-                    "E126",
-                    "E133",
-                    "E226",
-                    "E241",
-                    "E242",
-                    "E704",
-                    "W505",
-                ],
+            "format": {
+                # Import management
+                "sort_imports": True,
+                "group_imports": True,
+                "remove_unused_imports": True,
+                "single_line_imports": False,
+                # Code formatting
+                "fix_indentation": True,
+                "normalize_strings": True,
+                "fix_line_length": True,
+                "remove_trailing_spaces": True,
+                "add_trailing_comma": True,
+                # Whitespace & spacing
+                "fix_whitespace": True,
+                "remove_blank_lines": True,
+                "ensure_newline_eof": True,
+                "spaces_around_operators": True,
+                # Statement formatting
+                "break_long_lines": True,
+                "fix_continuation_lines": True,
+                "format_docstrings": True,
+                # Specific fixes
+                "remove_print_statements": False,
+                "convert_tabs_to_spaces": True,
+                "fix_encoding_declaration": True,
+                # Advanced options
                 "max_line_length": 88,
-                "max_doc_length": 100,
                 "indent_size": 4,
-                "aggressive": 0,
-                "experimental": False,
             },
             "exclusions": {
                 "patterns": [
@@ -125,46 +130,6 @@ class CodeFormatterConfig:
                 "respect_gitignore": True,
                 "include_untracked": True,
             },
-            "tools": {
-                "suggest_black": True,
-                "suggest_isort": True,
-                "suggest_ruff": True,
-                "suggest_flake8": False,
-                "suggest_pylint": False,
-                "suggest_mypy": True,
-                "auto_format": False,
-            },
-            "formatters": {
-                "ruff": {
-                    "enabled": True,
-                    "priority": 1,
-                    "fix_unsafe": False,
-                    "format": True,
-                },
-                "black": {
-                    "enabled": True,
-                    "priority": 2,
-                    "line_length": 88,
-                    "skip_string_normalization": False,
-                },
-                "isort": {
-                    "enabled": True,
-                    "priority": 3,
-                    "profile": "black",
-                    "line_length": 88,
-                },
-                "autopep8": {
-                    "enabled": False,
-                    "priority": 4,
-                    "aggressive": 1,
-                    "max_line_length": 88,
-                },
-            },
-            "compatibility": {
-                "black_compatible": True,
-                "ruff_compatible": True,
-                "pep8_compliant": True,
-            },
         }
 
         if config_file and config_file.exists() and yaml:
@@ -215,7 +180,9 @@ class CodeFormatter:
         self.config = config or CodeFormatterConfig()
         self.git_root = self._find_git_root()
         self.gitignore_patterns = self._load_gitignore_patterns()
-        self.available_formatters = self._check_available_formatters()
+        self.available_tools = self._check_available_tools()
+        self.applied_actions = []
+        self.skipped_actions = []
 
     def _find_git_root(self) -> Path:
         """Find the git repository root."""
@@ -268,47 +235,27 @@ class CodeFormatter:
 
         return False
 
-    def _check_available_formatters(self) -> Dict[str, bool]:
-        """Check which formatters are available."""
-        formatters = {}
+    def _check_available_tools(self) -> Dict[str, bool]:
+        """Check which formatting tools are available."""
+        tools = {}
 
-        # Check Ruff (modern, ultra-fast formatter)
-        try:
-            result = subprocess.run(
-                ["ruff", "--version"], capture_output=True, text=True
-            )
-            formatters["ruff"] = result.returncode == 0
-        except (subprocess.SubprocessError, FileNotFoundError):
-            formatters["ruff"] = False
+        # Check for required tools
+        tool_commands = {
+            "isort": ["isort", "--version"],
+            "black": ["black", "--version"],
+            "ruff": ["ruff", "--version"],
+            "autopep8": ["autopep8", "--version"],
+            "autoflake": ["autoflake", "--version"],
+        }
 
-        # Check Black
-        try:
-            result = subprocess.run(
-                ["black", "--version"], capture_output=True, text=True
-            )
-            formatters["black"] = result.returncode == 0
-        except (subprocess.SubprocessError, FileNotFoundError):
-            formatters["black"] = False
+        for tool, command in tool_commands.items():
+            try:
+                result = subprocess.run(command, capture_output=True, text=True)
+                tools[tool] = result.returncode == 0
+            except (subprocess.SubprocessError, FileNotFoundError):
+                tools[tool] = False
 
-        # Check isort
-        try:
-            result = subprocess.run(
-                ["isort", "--version"], capture_output=True, text=True
-            )
-            formatters["isort"] = result.returncode == 0
-        except (subprocess.SubprocessError, FileNotFoundError):
-            formatters["isort"] = False
-
-        # Check autopep8
-        try:
-            result = subprocess.run(
-                ["autopep8", "--version"], capture_output=True, text=True
-            )
-            formatters["autopep8"] = result.returncode == 0
-        except (subprocess.SubprocessError, FileNotFoundError):
-            formatters["autopep8"] = False
-
-        return formatters
+        return tools
 
     def _get_git_files(self, status_filter: str = "all") -> Set[Path]:
         """Get Python files from git based on status."""
@@ -387,257 +334,205 @@ class CodeFormatter:
                 )
             return self._get_all_python_files()
 
-    def _run_ruff_format(
-        self, files: Set[Path], verbose: bool = False
-    ) -> Tuple[int, int]:
-        """Run Ruff formatter and fixer."""
-        formatted = 0
-        failed = 0
-
-        if not self.available_formatters.get("ruff"):
-            return formatted, failed
-
-        # First run ruff check --fix for linting fixes
-        if self.config.get("formatters.ruff.enabled", True):
-            fix_args = ["ruff", "check", "--fix"]
-
-            if self.config.get("formatters.ruff.fix_unsafe", False):
-                fix_args.append("--unsafe-fixes")
-
+    def _run_command_on_files(
+        self, command: List[str], files: Set[Path], description: str
+    ) -> bool:
+        """Run a command on a set of files."""
+        try:
             for file_path in files:
-                try:
-                    result = subprocess.run(
-                        fix_args + [str(file_path)], capture_output=True, text=True
-                    )
-                    if result.returncode != 0 and verbose:
-                        print(
-                            f"⚠️  Ruff fix issues for {file_path.name}: {result.stderr}"
-                        )
-                except Exception as e:
-                    if verbose:
-                        print(f"❌ Ruff fix failed for {file_path.name}: {e}")
-                    failed += 1
-
-        # Then run ruff format for formatting
-        if self.config.get("formatters.ruff.format", True):
-            for file_path in files:
-                try:
-                    result = subprocess.run(
-                        ["ruff", "format", str(file_path)],
-                        capture_output=True,
-                        text=True,
-                    )
-                    if result.returncode == 0:
-                        formatted += 1
-                        if verbose:
-                            print(f"✅ Ruff formatted: {file_path.name}")
-                    else:
-                        failed += 1
-                        if verbose:
-                            print(
-                                f"❌ Ruff format failed for {file_path.name}: {result.stderr}"
-                            )
-                except Exception as e:
-                    failed += 1
-                    if verbose:
-                        print(f"❌ Ruff format error for {file_path.name}: {e}")
-
-        return formatted, failed
-
-    def _run_black_format(
-        self, files: Set[Path], verbose: bool = False
-    ) -> Tuple[int, int]:
-        """Run Black formatter."""
-        formatted = 0
-        failed = 0
-
-        if not self.available_formatters.get("black"):
-            return formatted, failed
-
-        if not self.config.get("formatters.black.enabled", True):
-            return formatted, failed
-
-        black_args = ["black"]
-
-        line_length = self.config.get("formatters.black.line_length", 88)
-        black_args.extend(["-l", str(line_length)])
-
-        if self.config.get("formatters.black.skip_string_normalization", False):
-            black_args.append("-S")
-
-        for file_path in files:
-            try:
                 result = subprocess.run(
-                    black_args + [str(file_path)], capture_output=True, text=True
+                    command + [str(file_path)], capture_output=True, text=True
                 )
-                if result.returncode == 0:
-                    if "reformatted" in result.stderr:
-                        formatted += 1
-                        if verbose:
-                            print(f"✅ Black formatted: {file_path.name}")
-                else:
-                    failed += 1
-                    if verbose:
-                        print(f"❌ Black failed for {file_path.name}: {result.stderr}")
-            except Exception as e:
-                failed += 1
-                if verbose:
-                    print(f"❌ Black error for {file_path.name}: {e}")
+                if result.returncode != 0 and self.config.get("output.verbose"):
+                    print(f"  ⚠️  {description} failed for {file_path.name}")
+            return True
+        except Exception as e:
+            if self.config.get("output.verbose"):
+                print(f"  ❌ {description} error: {e}")
+            return False
 
-        return formatted, failed
-
-    def _run_isort_format(
-        self, files: Set[Path], verbose: bool = False
-    ) -> Tuple[int, int]:
-        """Run isort formatter."""
-        formatted = 0
-        failed = 0
-
-        if not self.available_formatters.get("isort"):
-            return formatted, failed
-
-        if not self.config.get("formatters.isort.enabled", True):
-            return formatted, failed
-
-        isort_args = ["isort"]
-
-        profile = self.config.get("formatters.isort.profile", "black")
-        isort_args.extend(["--profile", profile])
-
-        line_length = self.config.get("formatters.isort.line_length", 88)
-        isort_args.extend(["--line-length", str(line_length)])
-
-        for file_path in files:
-            try:
-                # Check if changes are needed first
-                check_result = subprocess.run(
-                    isort_args + ["--check-only", "--diff", str(file_path)],
-                    capture_output=True,
-                    text=True,
-                )
-
-                if check_result.returncode != 0:
-                    # File needs formatting
-                    result = subprocess.run(
-                        isort_args + [str(file_path)], capture_output=True, text=True
-                    )
-                    if result.returncode == 0:
-                        formatted += 1
-                        if verbose:
-                            print(f"✅ isort formatted: {file_path.name}")
-                    else:
-                        failed += 1
-                        if verbose:
-                            print(
-                                f"❌ isort failed for {file_path.name}: {result.stderr}"
-                            )
-            except Exception as e:
-                failed += 1
-                if verbose:
-                    print(f"❌ isort error for {file_path.name}: {e}")
-
-        return formatted, failed
-
-    def _run_autopep8_format(
-        self, files: Set[Path], verbose: bool = False
-    ) -> Tuple[int, int]:
-        """Run autopep8 formatter."""
-        formatted = 0
-        failed = 0
-
-        if not self.available_formatters.get("autopep8"):
-            return formatted, failed
-
-        if not self.config.get("formatters.autopep8.enabled", False):
-            return formatted, failed
-
-        autopep8_args = ["autopep8", "--in-place"]
-
-        aggressive = self.config.get("formatters.autopep8.aggressive", 1)
-        for _ in range(aggressive):
-            autopep8_args.append("-a")
-
-        max_line_length = self.config.get("formatters.autopep8.max_line_length", 88)
-        autopep8_args.extend(["--max-line-length", str(max_line_length)])
-
-        # Add ignore rules from pycodestyle config
-        ignore_rules = self.config.get("pycodestyle.ignore", [])
-        if ignore_rules:
-            autopep8_args.extend(["--ignore", ",".join(ignore_rules)])
-
-        for file_path in files:
-            try:
-                result = subprocess.run(
-                    autopep8_args + [str(file_path)], capture_output=True, text=True
-                )
-                if result.returncode == 0:
-                    formatted += 1
-                    if verbose:
-                        print(f"✅ autopep8 formatted: {file_path.name}")
-                else:
-                    failed += 1
-                    if verbose:
-                        print(
-                            f"❌ autopep8 failed for {file_path.name}: {result.stderr}"
-                        )
-            except Exception as e:
-                failed += 1
-                if verbose:
-                    print(f"❌ autopep8 error for {file_path.name}: {e}")
-
-        return formatted, failed
-
-    def format_files(
-        self, files: Set[Path], formatters: List[str], verbose: bool = False
-    ) -> Dict[str, Dict[str, int]]:
-        """Format files using specified formatters."""
+    def apply_format_actions(
+        self, files: Set[Path], enabled_actions: List[str], verbose: bool = False
+    ) -> Dict[str, Any]:
+        """Apply specific formatting actions based on configuration and CLI overrides."""
         if not files:
             print("📝 No Python files found to format.")
-            return {}
+            return {"success": False, "actions_applied": [], "actions_skipped": []}
 
-        results = {}
+        results = {"success": True, "actions_applied": [], "actions_skipped": []}
         show_progress = self.config.get("output.show_progress", True)
 
-        # Get formatter configs and sort by priority
-        formatter_configs = []
-        for formatter in formatters:
-            if formatter in ["ruff", "black", "isort", "autopep8"]:
-                priority = self.config.get(f"formatters.{formatter}.priority", 99)
-                formatter_configs.append((priority, formatter))
+        # Get configuration settings
+        format_config = self.config.get("format", {})
+        max_line_length = format_config.get("max_line_length", 88)
+        indent_size = format_config.get("indent_size", 4)
 
-        formatter_configs.sort()
+        # Map actions to specific tool commands
+        action_mappings = {
+            # Import management
+            "sort_imports": {
+                "tool": "isort",
+                "command": [
+                    "isort",
+                    "--profile",
+                    "black",
+                    "--line-length",
+                    str(max_line_length),
+                ],
+                "description": "Sort imports",
+            },
+            "group_imports": {
+                "tool": "isort",
+                "command": [
+                    "isort",
+                    "--profile",
+                    "black",
+                    "--force-grid-wrap",
+                    "0",
+                    "--multi-line",
+                    "3",
+                ],
+                "description": "Group imports by type",
+            },
+            "remove_unused_imports": {
+                "tool": "autoflake",
+                "command": [
+                    "autoflake",
+                    "--in-place",
+                    "--remove-unused-variables",
+                    "--remove-all-unused-imports",
+                ],
+                "description": "Remove unused imports",
+                "fallback_tool": "ruff",
+                "fallback_command": ["ruff", "check", "--select", "F401,F841", "--fix"],
+            },
+            # Code formatting
+            "fix_indentation": {
+                "tool": "autopep8",
+                "command": [
+                    "autopep8",
+                    "--in-place",
+                    "--select",
+                    "E101,E111,E112,E113,E114,E115,E116,E117",
+                    f"--indent-size={indent_size}",
+                ],
+                "description": "Fix indentation",
+            },
+            "normalize_strings": {
+                "tool": "black",
+                "command": ["black", "-l", str(max_line_length)],
+                "description": "Normalize string quotes",
+            },
+            "fix_line_length": {
+                "tool": "black",
+                "command": ["black", "-l", str(max_line_length)],
+                "description": "Fix line length",
+                "fallback_tool": "autopep8",
+                "fallback_command": [
+                    "autopep8",
+                    "--in-place",
+                    "--max-line-length",
+                    str(max_line_length),
+                    "--aggressive",
+                ],
+            },
+            "remove_trailing_spaces": {
+                "tool": "autopep8",
+                "command": ["autopep8", "--in-place", "--select", "W291,W292,W293"],
+                "description": "Remove trailing whitespace",
+            },
+            # Whitespace & spacing
+            "fix_whitespace": {
+                "tool": "autopep8",
+                "command": [
+                    "autopep8",
+                    "--in-place",
+                    "--select",
+                    "E201,E202,E203,E211,E221,E222,E223,E224,E225,E226,E227,E228",
+                ],
+                "description": "Fix whitespace around operators",
+            },
+            "remove_blank_lines": {
+                "tool": "autopep8",
+                "command": [
+                    "autopep8",
+                    "--in-place",
+                    "--select",
+                    "E301,E302,E303,E304,E305,E306",
+                ],
+                "description": "Remove excessive blank lines",
+            },
+            "ensure_newline_eof": {
+                "tool": "autopep8",
+                "command": ["autopep8", "--in-place", "--select", "W292"],
+                "description": "Ensure newline at end of file",
+            },
+            # Statement formatting
+            "break_long_lines": {
+                "tool": "black",
+                "command": ["black", "-l", str(max_line_length)],
+                "description": "Break long lines properly",
+            },
+            "format_docstrings": {
+                "tool": "black",
+                "command": ["black", "-l", str(max_line_length)],
+                "description": "Format docstrings",
+            },
+            # Specific fixes
+            "convert_tabs_to_spaces": {
+                "tool": "autopep8",
+                "command": ["autopep8", "--in-place", "--select", "W191"],
+                "description": "Convert tabs to spaces",
+            },
+        }
 
-        # Run formatters in priority order
-        for priority, formatter in formatter_configs:
-            if show_progress:
-                print(f"\n🔧 Running {formatter}...")
-
-            if formatter == "ruff":
-                formatted, failed = self._run_ruff_format(files, verbose)
-            elif formatter == "black":
-                formatted, failed = self._run_black_format(files, verbose)
-            elif formatter == "isort":
-                formatted, failed = self._run_isort_format(files, verbose)
-            elif formatter == "autopep8":
-                formatted, failed = self._run_autopep8_format(files, verbose)
-            else:
+        # Process each enabled action
+        for action_name, action_config in action_mappings.items():
+            # Check if action is enabled (from enabled_actions list)
+            if action_name not in enabled_actions:
                 continue
 
-            results[formatter] = {
-                "formatted": formatted,
-                "failed": failed,
-                "total": len(files),
-            }
+            tool = action_config["tool"]
+            command = action_config["command"]
+            description = action_config["description"]
 
-            if show_progress and not verbose:
-                if formatted > 0:
-                    print(f"  ✅ Formatted {formatted}/{len(files)} files")
-                if failed > 0:
-                    print(f"  ⚠️  Failed to format {failed} files")
+            # Check if primary tool is available
+            if not self.available_tools.get(tool):
+                # Try fallback tool if available
+                if "fallback_tool" in action_config:
+                    fallback_tool = action_config["fallback_tool"]
+                    if self.available_tools.get(fallback_tool):
+                        tool = fallback_tool
+                        command = action_config["fallback_command"]
+                    else:
+                        results["actions_skipped"].append(
+                            f"{action_name} ({tool} not available)"
+                        )
+                        continue
+                else:
+                    results["actions_skipped"].append(
+                        f"{action_name} ({tool} not available)"
+                    )
+                    continue
+
+            # Apply the action
+            if show_progress:
+                print(f"  ▶ {description}...")
+
+            success = self._run_command_on_files(command, files, description)
+
+            if success:
+                results["actions_applied"].append(action_name)
+                if verbose:
+                    print(f"    ✅ {description} completed")
+            else:
+                results["actions_skipped"].append(f"{action_name} (failed)")
+                if verbose:
+                    print(f"    ❌ {description} failed")
 
         return results
 
-    def print_summary(self, results: Dict[str, Dict[str, int]], files_count: int):
+    def print_summary(self, results: Dict[str, Any], files_count: int):
         """Print summary of formatting results."""
         if not self.config.get("output.show_summary", True):
             return
@@ -647,75 +542,44 @@ class CodeFormatter:
         print(f"{'=' * 60}")
         print(f"Files processed: {files_count}")
 
-        if results:
-            print("\n🔧 Formatter Results:")
+        if results.get("actions_applied"):
+            print(f"\n✅ Actions applied ({len(results['actions_applied'])}):")
+            for action in results["actions_applied"]:
+                print(f"  • {action}")
 
-            total_formatted = 0
-            total_failed = 0
+        if results.get("actions_skipped"):
+            print(f"\n⚠️  Actions skipped ({len(results['actions_skipped'])}):")
+            for action in results["actions_skipped"]:
+                print(f"  • {action}")
 
-            for formatter, stats in results.items():
-                formatted = stats["formatted"]
-                failed = stats["failed"]
-                total = stats["total"]
-
-                total_formatted = max(total_formatted, formatted)
-                total_failed = max(total_failed, failed)
-
-                status = "✅" if failed == 0 else "⚠️"
-
-                print(
-                    f"  {status} {formatter.capitalize()}: {formatted} formatted, {failed} failed"
-                )
-
-            print("\n📊 Overall:")
-            if total_failed == 0:
-                print(f"  ✅ Successfully formatted {total_formatted} files")
-            else:
-                print(
-                    f"  ⚠️  Formatted {total_formatted} files with {total_failed} failures"
-                )
-        else:
-            print("\n❌ No formatters were run")
-
-        self._show_suggestions()
+        # Show missing tools
+        missing_tools = [
+            tool for tool, available in self.available_tools.items() if not available
+        ]
+        if missing_tools:
+            print(f"\n💡 Missing tools (install for more features):")
+            for tool in missing_tools:
+                if tool == "isort":
+                    print(f"  • pip install isort  (import sorting)")
+                elif tool == "black":
+                    print(f"  • pip install black  (code formatting)")
+                elif tool == "autopep8":
+                    print(f"  • pip install autopep8  (PEP 8 fixes)")
+                elif tool == "autoflake":
+                    print(f"  • pip install autoflake  (remove unused imports)")
+                elif tool == "ruff":
+                    print(f"  • pip install ruff  (fast linting and formatting)")
 
         print(f"{'=' * 60}")
 
-    def _show_suggestions(self):
-        """Show suggestions for missing formatters."""
-        print("\n💡 Suggestions:")
-
-        if not self.available_formatters.get("ruff"):
-            print("   • 🚀 Install Ruff for ultra-fast formatting: pip install ruff")
-
-        if not self.available_formatters.get("black"):
-            print("   • Install Black for PEP 8 formatting: pip install black")
-
-        if not self.available_formatters.get("isort"):
-            print("   • Install isort for import sorting: pip install isort")
-
-        if not self.available_formatters.get("autopep8"):
-            print(
-                "   • Install autopep8 for automatic PEP 8 fixes: pip install autopep8"
-            )
-
-        all_available = all(self.available_formatters.values())
-        if all_available:
-            print("   • ✅ All formatters are installed and ready to use")
-            print("   • Consider setting up pre-commit hooks for automatic formatting")
-            print("   • Run 'code_quality_checker.py' to verify formatting results")
-
 
 def generate_shortcut_command(
-    mode: str, formatters: List[str], verbose: bool, config_file: Optional[str] = None
+    mode: str, verbose: bool, config_file: Optional[str] = None
 ) -> str:
     """Generate equivalent command line for the current selection."""
     cmd_parts = ["uv run python scripts/code_formatter.py"]
 
     cmd_parts.append(f"--mode {mode}")
-
-    if formatters:
-        cmd_parts.append(f"--formatters {','.join(formatters)}")
 
     if verbose:
         cmd_parts.append("--verbose")
@@ -728,17 +592,57 @@ def generate_shortcut_command(
     return " ".join(cmd_parts)
 
 
+def get_available_format_actions():
+    """Get all available format actions."""
+    return [
+        # Import management
+        "sort_imports",
+        "group_imports",
+        "remove_unused_imports",
+        "single_line_imports",
+        # Code formatting
+        "fix_indentation",
+        "normalize_strings",
+        "fix_line_length",
+        "remove_trailing_spaces",
+        "add_trailing_comma",
+        # Whitespace & spacing
+        "fix_whitespace",
+        "remove_blank_lines",
+        "ensure_newline_eof",
+        "spaces_around_operators",
+        # Statement formatting
+        "break_long_lines",
+        "fix_continuation_lines",
+        "format_docstrings",
+        # Specific fixes
+        "remove_print_statements",
+        "convert_tabs_to_spaces",
+        "fix_encoding_declaration",
+    ]
+
+
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Auto-format Python code using Black, isort, Ruff and other tools",
+        description="Auto-format Python code based on specific formatting actions",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   %(prog)s                                    # Interactive mode
-  %(prog)s --mode all --formatters ruff,black # Format all files with ruff and black
-  %(prog)s --mode staged --verbose            # Format staged files verbosely
-  %(prog)s --mode modified --formatters isort # Format modified files with isort only
+  %(prog)s --mode all --yes                  # Format all files, skip confirmation
+  %(prog)s --mode staged --verbose           # Format staged files verbosely
+  %(prog)s --mode modified --no-verbose --yes # Format modified files quietly, no prompts
+  
+  # Enable/disable specific actions (overrides config):
+  %(prog)s --mode all --enable-sort_imports --disable-normalize_strings
+  %(prog)s --mode all --only-sort_imports,remove_unused_imports
+  
+  # List available actions:
+  %(prog)s --list-actions
+
+Formatting actions are configured in .scli-quality.yml
+Enable/disable specific actions in the 'format:' section or via CLI flags
 """,
     )
 
@@ -750,21 +654,21 @@ Examples:
     )
 
     parser.add_argument(
-        "--formatters",
-        "-f",
-        type=str,
-        help="Comma-separated list of formatters to use (ruff,black,isort,autopep8)",
-    )
-
-    parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
-        help="Enable verbose output (shows details for each file)",
+        help="Enable verbose output (shows details for each action)",
     )
 
     parser.add_argument(
         "--no-verbose", action="store_true", help="Disable verbose output"
+    )
+
+    parser.add_argument(
+        "--yes",
+        "-y",
+        action="store_true",
+        help="Skip confirmation prompts (assume yes to all)",
     )
 
     parser.add_argument(
@@ -774,19 +678,61 @@ Examples:
         help="Path to configuration file (default: .scli-quality.yml)",
     )
 
+    parser.add_argument(
+        "--list-actions",
+        action="store_true",
+        help="List all available format actions and exit",
+    )
+
+    parser.add_argument(
+        "--only",
+        type=str,
+        help="Only run these specific actions (comma-separated)",
+    )
+
+    # Dynamically add enable/disable flags for each action
+    available_actions = get_available_format_actions()
+    for action in available_actions:
+        parser.add_argument(
+            f"--enable-{action.replace('_', '-')}",
+            dest=f"enable_{action}",
+            action="store_true",
+            help=f"Enable {action} action (overrides config)",
+        )
+        parser.add_argument(
+            f"--disable-{action.replace('_', '-')}",
+            dest=f"disable_{action}",
+            action="store_true",
+            help=f"Disable {action} action (overrides config)",
+        )
+
     return parser.parse_args()
 
 
 def main():
     """Main entry point for code formatter."""
-    # Parse command line arguments only if run directly
-    if __name__ == "__main__":
+    # Always parse command line arguments
+    # When called from SCLI, sys.argv will be set properly by the script loader
+    try:
         args = parse_arguments()
-    else:
-        # Create dummy args when run through SCLI
+    except SystemExit as e:
+        # argparse calls sys.exit() on error or help, re-raise it
+        raise
+    except Exception:
+        # If parsing fails for any other reason, use defaults
         args = argparse.Namespace(
-            mode=None, formatters=None, verbose=False, no_verbose=False, config=None
+            mode=None,
+            verbose=False,
+            no_verbose=False,
+            config=None,
+            yes=False,
+            list_actions=False,
+            only=None,
         )
+        # Add dynamic action flags
+        for action in get_available_format_actions():
+            setattr(args, f"enable_{action}", False)
+            setattr(args, f"disable_{action}", False)
 
     project_root = Path.cwd()
 
@@ -801,6 +747,58 @@ def main():
     config = CodeFormatterConfig(config_file if config_file.exists() else None)
     formatter = CodeFormatter(project_root, config)
 
+    # Handle --list-actions flag
+    if args.list_actions:
+        print("📋 Available Format Actions:")
+        print("=" * 50)
+
+        categories = {
+            "Import Management": [
+                "sort_imports",
+                "group_imports",
+                "remove_unused_imports",
+                "single_line_imports",
+            ],
+            "Code Formatting": [
+                "fix_indentation",
+                "normalize_strings",
+                "fix_line_length",
+                "remove_trailing_spaces",
+                "add_trailing_comma",
+            ],
+            "Whitespace & Spacing": [
+                "fix_whitespace",
+                "remove_blank_lines",
+                "ensure_newline_eof",
+                "spaces_around_operators",
+            ],
+            "Statement Formatting": [
+                "break_long_lines",
+                "fix_continuation_lines",
+                "format_docstrings",
+            ],
+            "Specific Fixes": [
+                "remove_print_statements",
+                "convert_tabs_to_spaces",
+                "fix_encoding_declaration",
+            ],
+        }
+
+        for category, actions in categories.items():
+            print(f"\n{category}:")
+            for action in actions:
+                flag_name = action.replace("_", "-")
+                print(f"  • {action}")
+                print(f"    Enable:  --enable-{flag_name}")
+                print(f"    Disable: --disable-{flag_name}")
+
+        print("\nUsage examples:")
+        print("  # Enable only specific actions:")
+        print("  --only sort_imports,remove_unused_imports")
+        print("\n  # Override config for specific actions:")
+        print("  --enable-sort-imports --disable-normalize-strings")
+        return
+
     print("🎨 Code Formatter")
     print(f"📁 Project: {project_root}")
 
@@ -812,140 +810,138 @@ def main():
     if formatter.git_root != project_root:
         print(f"🔗 Git root: {formatter.git_root}")
 
-    # Show available formatters
-    print("\n📦 Available formatters:")
-    for name, available in formatter.available_formatters.items():
-        status = "✅" if available else "❌"
-        enabled = config.get(f"formatters.{name}.enabled", False)
-        if available:
-            if enabled:
-                print(f"  {status} {name} (enabled)")
-            else:
-                print(f"  {status} {name} (disabled in config)")
-        else:
-            print(f"  {status} {name} (not installed)")
+    # Show available tools
+    print("\n📦 Available tools:")
+    tool_status = {
+        "isort": "Import sorting",
+        "black": "Code formatting",
+        "autopep8": "PEP 8 fixes",
+        "autoflake": "Remove unused imports",
+        "ruff": "Fast linting/formatting",
+    }
 
-    # Check if any formatter is available
-    if not any(formatter.available_formatters.values()):
-        print("\n❌ No formatters are installed!")
-        print("📦 Install at least one formatter:")
-        print("   • pip install ruff   (recommended - ultra-fast)")
-        print("   • pip install black  (popular formatter)")
-        print("   • pip install isort  (import sorting)")
-        print("   • pip install autopep8 (PEP 8 fixes)")
-        if __name__ == "__main__":
-            sys.exit(1)
-        else:
-            return
+    for tool, description in tool_status.items():
+        status = "✅" if formatter.available_tools.get(tool) else "❌"
+        print(f"  {status} {tool} ({description})")
+
+    # Process CLI overrides for format actions
+    format_config = config.get("format", {})
+
+    # Handle --only flag
+    if args.only:
+        # If --only is specified, disable all actions first
+        only_actions = [a.strip() for a in args.only.split(",")]
+        enabled_actions = only_actions
+    else:
+        # Start with config settings
+        enabled_actions = [
+            k for k, v in format_config.items() if isinstance(v, bool) and v
+        ]
+
+        # Apply CLI enable/disable overrides
+        for action in get_available_format_actions():
+            if getattr(args, f"enable_{action}", False):
+                if action not in enabled_actions:
+                    enabled_actions.append(action)
+            elif getattr(args, f"disable_{action}", False):
+                if action in enabled_actions:
+                    enabled_actions.remove(action)
+
+    if enabled_actions:
+        print(f"\n🔧 Enabled format actions ({len(enabled_actions)}):")
+
+        # Group actions by category
+        import_actions = [
+            "sort_imports",
+            "group_imports",
+            "remove_unused_imports",
+            "single_line_imports",
+        ]
+        code_actions = [
+            "fix_indentation",
+            "normalize_strings",
+            "fix_line_length",
+            "remove_trailing_spaces",
+            "add_trailing_comma",
+        ]
+        whitespace_actions = [
+            "fix_whitespace",
+            "remove_blank_lines",
+            "ensure_newline_eof",
+            "spaces_around_operators",
+        ]
+        statement_actions = [
+            "break_long_lines",
+            "fix_continuation_lines",
+            "format_docstrings",
+        ]
+        specific_actions = [
+            "remove_print_statements",
+            "convert_tabs_to_spaces",
+            "fix_encoding_declaration",
+        ]
+
+        categories = [
+            ("Import Management", import_actions),
+            ("Code Formatting", code_actions),
+            ("Whitespace & Spacing", whitespace_actions),
+            ("Statement Formatting", statement_actions),
+            ("Specific Fixes", specific_actions),
+        ]
+
+        for category_name, category_actions in categories:
+            category_enabled = [a for a in category_actions if a in enabled_actions]
+            if category_enabled:
+                print(f"  📌 {category_name}:")
+                for action in category_enabled:
+                    print(f"     • {action}")
+    else:
+        print("\n⚠️  No format actions enabled in configuration!")
+        print("💡 Enable actions in .scli-quality.yml under 'format:' section")
+        return
 
     # Track if we used interactive mode for shortcut generation
     interactive_mode = False
+    skip_prompts = args.yes  # Use --yes flag to skip all prompts
 
     # Determine evaluation mode
     if args.mode:
         mode = args.mode
     else:
-        interactive_mode = True
-        # Get default mode from config
-        default_mode = config.get("default_mode", "all")
+        if skip_prompts:
+            # Use default from config if --yes is specified
+            mode = config.get("default_mode", "all")
+        else:
+            interactive_mode = True
+            # Get default mode from config
+            config.get("default_mode", "all")
 
-        # Ask for evaluation mode if not specified
-        modes = [
-            "📁 All Python files in project",
-            "📋 Git staged files only",
-            "📝 Git unstaged files only",
-            "🔄 Git modified files (staged + unstaged)",
-            "🗂️  Git tracked files only",
-        ]
+            # Ask for evaluation mode if not specified
+            modes = [
+                "📁 All Python files in project",
+                "📋 Git staged files only",
+                "📝 Git unstaged files only",
+                "🔄 Git modified files (staged + unstaged)",
+                "🗂️  Git tracked files only",
+            ]
 
-        mode_mapping = {
-            "📁 All Python files in project": "all",
-            "📋 Git staged files only": "staged",
-            "📝 Git unstaged files only": "unstaged",
-            "🔄 Git modified files (staged + unstaged)": "modified",
-            "🗂️  Git tracked files only": "tracked",
-        }
+            mode_mapping = {
+                "📁 All Python files in project": "all",
+                "📋 Git staged files only": "staged",
+                "📝 Git unstaged files only": "unstaged",
+                "🔄 Git modified files (staged + unstaged)": "modified",
+                "🗂️  Git tracked files only": "tracked",
+            }
 
-        selected_mode = simple_menu("Select files to format:", modes)
-        if selected_mode is None:
-            print("Operation cancelled.")
-            if __name__ == "__main__":
-                sys.exit(0)
-            else:
-                return
-
-        mode = mode_mapping[selected_mode]
-
-    # Determine which formatters to use
-    if args.formatters:
-        selected_formatters = args.formatters.split(",")
-    else:
-        interactive_mode = True
-        # Build list of available and enabled formatters
-        formatter_options = []
-        formatter_mapping = {}
-
-        for name in ["ruff", "black", "isort", "autopep8"]:
-            if formatter.available_formatters.get(name):
-                enabled = config.get(f"formatters.{name}.enabled", False)
-                if name == "ruff":
-                    label = "🚀 Ruff (ultra-fast linter + formatter)"
-                elif name == "black":
-                    label = "⚫ Black (PEP 8 formatter)"
-                elif name == "isort":
-                    label = "📦 isort (import sorting)"
-                elif name == "autopep8":
-                    label = "🔧 autopep8 (PEP 8 fixes)"
+            selected_mode = simple_menu("Select files to format:", modes)
+            if selected_mode is None:
+                print("Operation cancelled.")
+                if __name__ == "__main__":
+                    sys.exit(0)
                 else:
-                    label = name
+                    return
 
-                if enabled:
-                    label += " [enabled in config]"
-
-                formatter_options.append(label)
-                formatter_mapping[label] = name
-
-        if not formatter_options:
-            print("\n❌ No formatters available to select!")
-            if __name__ == "__main__":
-                sys.exit(1)
-            else:
-                return
-
-        print("\nSelect formatters to use (space to select, enter to confirm):")
-        print("(Formatters will run in priority order from config)")
-
-        # For simplicity, let's ask one by one
-        selected_formatters = []
-        for option in formatter_options:
-            formatter_name = formatter_mapping[option]
-            default = config.get(f"formatters.{formatter_name}.enabled", False)
-            if confirm(f"Use {option}?", default=default):
-                selected_formatters.append(formatter_name)
-
-        if not selected_formatters:
-            print("No formatters selected. Operation cancelled.")
-            if __name__ == "__main__":
-                sys.exit(0)
-            else:
-                return
-
-    # Validate selected formatters
-    valid_formatters = []
-    for fmt in selected_formatters:
-        if fmt not in formatter.available_formatters:
-            print(f"⚠️  Unknown formatter: {fmt}")
-        elif not formatter.available_formatters[fmt]:
-            print(f"⚠️  Formatter not installed: {fmt}")
-        else:
-            valid_formatters.append(fmt)
-
-    if not valid_formatters:
-        print("❌ No valid formatters selected!")
-        if __name__ == "__main__":
-            sys.exit(1)
-        else:
-            return
+            mode = mode_mapping[selected_mode]
 
     # Determine verbose mode
     if args.verbose:
@@ -953,14 +949,18 @@ def main():
     elif args.no_verbose:
         verbose = False
     else:
-        if not interactive_mode:
-            interactive_mode = True
-        # Ask for verbose mode (use config default)
-        default_verbose = config.get("output.verbose", False)
-        verbose = confirm(
-            "Enable verbose output? (shows details for each file)",
-            default=default_verbose,
-        )
+        if skip_prompts:
+            # Use default from config if --yes is specified
+            verbose = config.get("output.verbose", False)
+        else:
+            if not interactive_mode:
+                interactive_mode = True
+            # Ask for verbose mode (use config default)
+            default_verbose = config.get("output.verbose", False)
+            verbose = confirm(
+                "Enable verbose output? (shows details for each action)",
+                default=default_verbose,
+            )
 
     # Show shortcut command if interactive mode was used
     if interactive_mode:
@@ -969,24 +969,27 @@ def main():
             if config_file.exists() and config_file.name != ".scli-quality.yml"
             else None
         )
-        shortcut_cmd = generate_shortcut_command(
-            mode, valid_formatters, verbose, config_name
-        )
+        shortcut_cmd = generate_shortcut_command(mode, verbose, config_name)
         print("\n💡 Shortcut for next time:")
         print(f"   {shortcut_cmd}")
 
+    # Show configuration details
+    print(f"\n📋 Configuration:")
+    print(f"   Max line length: {format_config.get('max_line_length', 88)}")
+    print(f"   Indent size: {format_config.get('indent_size', 4)} spaces")
+
     # Confirm before formatting
-    print("\n📝 Ready to format files:")
+    print(f"\n📝 Ready to format files:")
     print(f"   Mode: {mode}")
-    print(f"   Formatters: {', '.join(valid_formatters)}")
+    print(f"   Actions: {len(enabled_actions)} enabled")
     print(f"   Verbose: {'Yes' if verbose else 'No'}")
 
-    if not confirm("\n⚠️  This will modify your files. Continue?", default=True):
-        print("Operation cancelled.")
-        if __name__ == "__main__":
+    if skip_prompts:
+        print("\n✅ Auto-confirmed (--yes flag)")
+    else:
+        if not confirm("\n⚠️  This will modify your files. Continue?", default=True):
+            print("Operation cancelled.")
             sys.exit(0)
-        else:
-            return
 
     start_time = time.time()
     start_time_str = datetime.now().strftime("%H:%M:%S")
@@ -998,14 +1001,12 @@ def main():
 
     if not files:
         print("📝 No Python files found to format.")
-        if __name__ == "__main__":
-            sys.exit(0)
-        else:
-            return
+        sys.exit(0)
 
     print(f"📂 Found {len(files)} Python files to format")
+    print("\n🔧 Applying format actions...")
 
-    results = formatter.format_files(files, valid_formatters, verbose)
+    results = formatter.apply_format_actions(files, enabled_actions, verbose)
 
     # Print results with completion time
     elapsed_time = time.time() - start_time
@@ -1015,15 +1016,12 @@ def main():
     formatter.print_summary(results, len(files))
 
     # Determine exit code
-    total_failed = sum(r.get("failed", 0) for r in results.values())
-    if total_failed > 0:
-        print(f"\n⚠️  Formatting completed with {total_failed} failures")
-        if __name__ == "__main__":
-            sys.exit(1)
+    if results.get("success"):
+        print(f"\n✅ Formatting completed successfully!")
+        sys.exit(0)
     else:
-        print("\n✅ Formatting completed successfully!")
-        if __name__ == "__main__":
-            sys.exit(0)
+        print(f"\n⚠️  Formatting completed with some issues")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

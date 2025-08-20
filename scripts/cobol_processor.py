@@ -345,7 +345,6 @@ def parse_cobol_copybook(cpy_file: str) -> List[CobolField]:
                     if redefines_target:
                         # REDEFINES: Start at position 1 (redefining the first structure)
                         field_start_pos = 1
-                        current_group_start = 1
                         current_position = 1
                         redefines_groups[name] = redefines_target
                         print(
@@ -354,7 +353,6 @@ def parse_cobol_copybook(cpy_file: str) -> List[CobolField]:
                     else:
                         # First/main structure: starts at position 1
                         field_start_pos = 1
-                        current_group_start = 1
                         current_position = 1
                 elif level >= 5:  # Child fields (05, 10, etc.)
                     # Child fields continue from current position within the group
@@ -707,10 +705,10 @@ def export_to_csv(
         )
 
         # Get data
-        records_by_type = parsed_data["records_by_type"]
+        parsed_data["records_by_type"]
         record_types = parsed_data["record_types"]
         all_lines = parsed_data["all_lines"]
-        encoding = parsed_data["encoding"]
+        parsed_data["encoding"]
 
         print(f"\n🔄 Processing all {len(all_lines)} records...")
 
