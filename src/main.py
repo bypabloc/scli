@@ -8,7 +8,7 @@ from .menu_utils import interactive_menu
 from .script_loader import ScriptLoader
 
 app = typer.Typer(
-    help="A CLI tool for executing selectable scripts", 
+    help="A CLI tool for executing selectable scripts",
     invoke_without_command=True,
     context_settings={"allow_extra_args": True, "allow_interspersed_args": False}
 )
