@@ -27,6 +27,14 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
+[dependency-groups]
+dev = [
+    "autopep8>=2.3.2",
+    "black>=25.1.0",
+    "isort>=6.0.1",
+    "ruff>=0.12.4",
+]
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
