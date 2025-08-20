@@ -8,8 +8,8 @@ from dataclasses import dataclass
 
 # Add the src directory to path to import scli modules  
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
-from scli.menu_utils import interactive_menu, text_input, confirm
-from scli.output_manager import OutputManager
+from menu_utils import interactive_menu, text_input, confirm
+from output_manager import OutputManager
 
 DESCRIPTION = "COBOL file processor - Process .cpy and .txt files to interpret data"
 

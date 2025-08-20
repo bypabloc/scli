@@ -13,7 +13,7 @@ import pandas as pd
 
 # Add the src directory to path to import scli modules
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
-from scli.menu_utils import interactive_menu, text_input
+from menu_utils import interactive_menu, text_input
 
 try:
     from textual import on, events

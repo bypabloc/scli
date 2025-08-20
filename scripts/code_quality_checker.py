@@ -9,7 +9,7 @@ from typing import List, Dict, Set, Tuple, Optional, Any
 import fnmatch
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
-from scli.menu_utils import simple_menu, confirm
+from menu_utils import simple_menu, confirm
 
 DESCRIPTION = "🔍 Code quality checker for Python files using pycodestyle"
 

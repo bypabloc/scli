@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 # Add the src directory to path to import scli modules
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
-from scli.menu_utils import interactive_menu, text_input, confirm
+from menu_utils import interactive_menu, text_input, confirm
 
 DESCRIPTION = "Network diagnostic tools - ping, port check, and DNS lookup"
 
