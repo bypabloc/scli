@@ -218,32 +218,3 @@ class LogAnalyzer:
         print(f"\nResults exported to: {output_file}")
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Analyze log request metrics")
-    parser.add_argument("csv_file", help="Path to the CSV log file")
-    parser.add_argument("--json-output", help="Export results to JSON file")
-    parser.add_argument(
-        "--quiet", "-q", action="store_true", help="Suppress console output"
-    )
-
-    args = parser.parse_args()
-
-    analyzer = LogAnalyzer(args.csv_file)
-
-    try:
-        analyzer.load_logs()
-
-        if not args.quiet:
-            analyzer.print_metrics()
-
-        if args.json_output:
-            analyzer.export_to_json(args.json_output)
-
-    except FileNotFoundError:
-        print(f"Error: File '{args.csv_file}' not found")
-        return 1
-    except Exception as e:
-        print(f"Error: {e}")
-        return 1
-
-    return 0

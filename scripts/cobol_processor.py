@@ -31,63 +31,6 @@ class CobolField:
             self.children = []
 
 
-def main():
-    print("🏢 COBOL File Processor")
-    print("=" * 50)
-
-    # Define menu options
-    menu_options = [
-        {
-            "name": "📂 Select files to process",
-            "value": "select_files",
-            "description": "Choose .cpy and .txt files for processing",
-            "action": select_and_process_files,
-        },
-        {
-            "name": "📁 Browse directory for COBOL files",
-            "value": "browse_directory",
-            "description": "Scan directory for .cpy and .txt files",
-            "action": browse_directory_files,
-        },
-        {
-            "name": "👋 Exit",
-            "value": "exit",
-            "description": "Quit the COBOL processor",
-            "action": None,
-        },
-    ]
-
-    while True:
-        try:
-            print("\n" + "=" * 50)
-            selected = interactive_menu("Select an option:", menu_options)
-
-            if not selected or selected["value"] == "exit":
-                print("👋 Goodbye!")
-                break
-
-            # Execute the selected action
-            if selected["action"]:
-                print(f"\n🔧 Running: {selected['name']}")
-                print("-" * 40)
-                selected["action"]()
-
-                # Ask if user wants to continue
-                if not confirm(
-                    "\nWould you like to perform another action?", default=True
-                ):
-                    print("👋 Goodbye!")
-                    break
-
-        except KeyboardInterrupt:
-            print("\n👋 Goodbye!")
-            break
-        except Exception as e:
-            print(f"❌ Error: {e}")
-            if not confirm("Would you like to continue?", default=True):
-                break
-
-
 def select_and_process_files():
     """Allow user to manually select .cpy and .txt files"""
     print("📂 File Selection Mode")
