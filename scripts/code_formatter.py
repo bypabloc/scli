@@ -8,8 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 from menu_utils import confirm, simple_menu
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 
 DESCRIPTION = "🎨 Auto-format Python code based on specific formatting actions"
 
@@ -246,6 +247,7 @@ class CodeFormatter:
             "ruff": ["ruff", "--version"],
             "autopep8": ["autopep8", "--version"],
             "autoflake": ["autoflake", "--version"],
+            "sed": ["sed", "--version"],
         }
 
         for tool, command in tool_commands.items():
@@ -406,6 +408,13 @@ class CodeFormatter:
                 "fallback_tool": "ruff",
                 "fallback_command": ["ruff", "check", "--select", "F401,F841", "--fix"],
             },
+            "move_imports_to_top": {
+                "tool": "isort",
+                "command": ["isort", "--profile", "black", "--float-to-top"],
+                "description": "Move imports to top of file (fixes E402)",
+                "fallback_tool": "autopep8",
+                "fallback_command": ["autopep8", "--in-place", "--select", "E402"],
+            },
             # Code formatting
             "fix_indentation": {
                 "tool": "autopep8",
@@ -437,9 +446,16 @@ class CodeFormatter:
                 ],
             },
             "remove_trailing_spaces": {
-                "tool": "autopep8",
-                "command": ["autopep8", "--in-place", "--select", "W291,W292,W293"],
+                "tool": "sed",
+                "command": ["sed", "-i", "s/[[:space:]]*$//"],
                 "description": "Remove trailing whitespace",
+                "fallback_tool": "autopep8",
+                "fallback_command": [
+                    "autopep8",
+                    "--in-place",
+                    "--select",
+                    "W291,W292,W293",
+                ],
             },
             # Whitespace & spacing
             "fix_whitespace": {
@@ -574,10 +590,13 @@ class CodeFormatter:
 
 
 def generate_shortcut_command(
-    mode: str, verbose: bool, config_file: Optional[str] = None
+    mode: str,
+    verbose: bool,
+    config_file: Optional[str] = None,
+    skip_prompts: bool = False,
 ) -> str:
     """Generate equivalent command line for the current selection."""
-    cmd_parts = ["uv run python scripts/code_formatter.py"]
+    cmd_parts = ["uv run python scli code_formatter"]
 
     cmd_parts.append(f"--mode {mode}")
 
@@ -585,6 +604,9 @@ def generate_shortcut_command(
         cmd_parts.append("--verbose")
     else:
         cmd_parts.append("--no-verbose")
+
+    if skip_prompts:
+        cmd_parts.append("--confirm")
 
     if config_file and config_file != ".scli-quality.yml":
         cmd_parts.append(f"--config {config_file}")
@@ -599,6 +621,7 @@ def get_available_format_actions():
         "sort_imports",
         "group_imports",
         "remove_unused_imports",
+        "move_imports_to_top",
         "single_line_imports",
         # Code formatting
         "fix_indentation",
@@ -630,14 +653,14 @@ def parse_arguments():
         epilog="""
 Examples:
   %(prog)s                                    # Interactive mode
-  %(prog)s --mode all --yes                  # Format all files, skip confirmation
+  %(prog)s --mode all --confirm              # Format all files, confirm modifications
   %(prog)s --mode staged --verbose           # Format staged files verbosely
-  %(prog)s --mode modified --no-verbose --yes # Format modified files quietly, no prompts
-  
+  %(prog)s --mode modified --no-verbose --confirm # Format modified files quietly, confirm
+
   # Enable/disable specific actions (overrides config):
   %(prog)s --mode all --enable-sort_imports --disable-normalize_strings
   %(prog)s --mode all --only-sort_imports,remove_unused_imports
-  
+
   # List available actions:
   %(prog)s --list-actions
 
@@ -665,10 +688,10 @@ Enable/disable specific actions in the 'format:' section or via CLI flags
     )
 
     parser.add_argument(
-        "--yes",
+        "--confirm",
         "-y",
         action="store_true",
-        help="Skip confirmation prompts (assume yes to all)",
+        help="Automatically confirm file modifications without prompting",
     )
 
     parser.add_argument(
@@ -715,7 +738,7 @@ def main():
     # When called from SCLI, sys.argv will be set properly by the script loader
     try:
         args = parse_arguments()
-    except SystemExit as e:
+    except SystemExit:
         # argparse calls sys.exit() on error or help, re-raise it
         raise
     except Exception:
@@ -725,7 +748,7 @@ def main():
             verbose=False,
             no_verbose=False,
             config=None,
-            yes=False,
+            confirm=False,
             list_actions=False,
             only=None,
         )
@@ -818,6 +841,7 @@ def main():
         "autopep8": "PEP 8 fixes",
         "autoflake": "Remove unused imports",
         "ruff": "Fast linting/formatting",
+        "sed": "Text processing",
     }
 
     for tool, description in tool_status.items():
@@ -902,14 +926,14 @@ def main():
 
     # Track if we used interactive mode for shortcut generation
     interactive_mode = False
-    skip_prompts = args.yes  # Use --yes flag to skip all prompts
+    skip_prompts = args.confirm  # Use --confirm flag to confirm modifications
 
     # Determine evaluation mode
     if args.mode:
         mode = args.mode
     else:
         if skip_prompts:
-            # Use default from config if --yes is specified
+            # Use default from config if --confirm is specified
             mode = config.get("default_mode", "all")
         else:
             interactive_mode = True
@@ -936,10 +960,7 @@ def main():
             selected_mode = simple_menu("Select files to format:", modes)
             if selected_mode is None:
                 print("Operation cancelled.")
-                if __name__ == "__main__":
-                    sys.exit(0)
-                else:
-                    return
+                return
 
             mode = mode_mapping[selected_mode]
 
@@ -950,7 +971,7 @@ def main():
         verbose = False
     else:
         if skip_prompts:
-            # Use default from config if --yes is specified
+            # Use default from config if --confirm is specified
             verbose = config.get("output.verbose", False)
         else:
             if not interactive_mode:
@@ -961,17 +982,6 @@ def main():
                 "Enable verbose output? (shows details for each action)",
                 default=default_verbose,
             )
-
-    # Show shortcut command if interactive mode was used
-    if interactive_mode:
-        config_name = (
-            config_file.name
-            if config_file.exists() and config_file.name != ".scli-quality.yml"
-            else None
-        )
-        shortcut_cmd = generate_shortcut_command(mode, verbose, config_name)
-        print("\n💡 Shortcut for next time:")
-        print(f"   {shortcut_cmd}")
 
     # Show configuration details
     print(f"\n📋 Configuration:")
@@ -985,11 +995,27 @@ def main():
     print(f"   Verbose: {'Yes' if verbose else 'No'}")
 
     if skip_prompts:
-        print("\n✅ Auto-confirmed (--yes flag)")
+        print("\n✅ Auto-confirmed (--confirm flag)")
     else:
         if not confirm("\n⚠️  This will modify your files. Continue?", default=True):
             print("Operation cancelled.")
             sys.exit(0)
+
+    # Show shortcut command if interactive mode was used (after confirmation)
+    if interactive_mode:
+        config_name = (
+            config_file.name
+            if config_file.exists() and config_file.name != ".scli-quality.yml"
+            else None
+        )
+        shortcut_cmd = generate_shortcut_command(
+            mode,
+            verbose,
+            config_name,
+            True,  # Always include --confirm in shortcut
+        )
+        print("\n💡 Shortcut for next time:")
+        print(f"   {shortcut_cmd}")
 
     start_time = time.time()
     start_time_str = datetime.now().strftime("%H:%M:%S")
@@ -1022,7 +1048,3 @@ def main():
     else:
         print(f"\n⚠️  Formatting completed with some issues")
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

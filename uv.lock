@@ -795,6 +795,7 @@ name = "scli"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "autopep8" },
     { name = "inquirer" },
     { name = "pandas" },
     { name = "pycodestyle" },
@@ -831,6 +832,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "autopep8", specifier = ">=2.3.2" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
     { name = "inquirer", specifier = ">=3.2.0" },
     { name = "pandas", specifier = ">=2.0.0" },

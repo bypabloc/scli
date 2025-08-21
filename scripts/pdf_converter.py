@@ -10,10 +10,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-# Add the src directory to path to import scli modules
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 from menu_utils import confirm, interactive_menu, text_input
 from output_manager import OutputManager
+
+# Add the src directory to path to import scli modules
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 
 DESCRIPTION = "PDF Converter - Convert PDF files to TXT or image formats"
 
@@ -599,7 +600,3 @@ def main():
             print(f"❌ Error: {e}")
             if not confirm("Would you like to continue?", default=True):
                 break
-
-
-if __name__ == "__main__":
-    main()

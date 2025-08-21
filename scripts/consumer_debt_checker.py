@@ -14,12 +14,13 @@ from typing import Dict, List, Optional, Tuple
 
 import requests
 
-# Add the src directory to path to import scli modules
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 from config_loader import create_sample_script_config, get_script_config
 from logger import get_logger, log_config_info, log_request
 from menu_utils import confirm, interactive_menu, text_input
 from output_manager import OutputManager
+
+# Add the src directory to path to import scli modules
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 
 DESCRIPTION = "Consumer debt checker - Query debts via Consumer API"
 
@@ -1522,7 +1523,3 @@ def get_file_size_str(size_bytes: int) -> str:
         return f"{int(size)} {units[unit_index]}"
     else:
         return f"{size:.1f} {units[unit_index]}"
-
-
-if __name__ == "__main__":
-    main()

@@ -4,9 +4,10 @@ import socket
 import subprocess
 import sys
 
+from menu_utils import confirm, interactive_menu, text_input
+
 # Add the src directory to path to import scli modules
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
-from menu_utils import confirm, interactive_menu, text_input
 
 DESCRIPTION = "Network diagnostic tools - ping, port check, and DNS lookup"
 

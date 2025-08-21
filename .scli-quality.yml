@@ -282,6 +282,7 @@ format:
   sort_imports: true              # Sort imports alphabetically
   group_imports: true             # Group imports by type (stdlib, third-party, local)
   remove_unused_imports: true     # Remove imports that are not used
+  move_imports_to_top: true       # Move imports to top of file (fixes E402)
   single_line_imports: false      # Force one import per line
   
   # CODE FORMATTING

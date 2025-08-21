@@ -57,12 +57,13 @@ class ScriptLoader:
         try:
             # Set sys.argv for the script to use argparse
             import sys
+
             original_argv = sys.argv.copy()
-            
+
             # Set the script name as argv[0] and pass remaining arguments
             script_path = scripts[script_name]["path"]
             sys.argv = [str(script_path)] + (args or [])
-            
+
             try:
                 scripts[script_name]["main_func"]()
                 return True

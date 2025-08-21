@@ -8,8 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 from menu_utils import confirm, simple_menu
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 
 DESCRIPTION = "🔍 Code quality checker for Python files using pycodestyle"
 
@@ -679,7 +680,7 @@ def generate_shortcut_command(
     mode: str, verbose: bool, config_file: Optional[str] = None
 ) -> str:
     """Generate equivalent command line for the current selection."""
-    cmd_parts = ["uv run python scripts/code_quality_checker.py"]
+    cmd_parts = ["uv run python scli code_quality_checker"]
 
     cmd_parts.append(f"--mode {mode}")
 
@@ -747,7 +748,7 @@ def main():
     # When called from SCLI, sys.argv will be set properly by the script loader
     try:
         args = parse_arguments()
-    except SystemExit as e:
+    except SystemExit:
         # argparse calls sys.exit() on error or help, re-raise it
         raise
     except Exception:
@@ -867,7 +868,3 @@ def main():
             f"\n✅ Quality check passed: {total_errors} errors within limit of {max_total_errors}"
         )
         sys.exit(0)
-
-
-if __name__ == "__main__":
-    main()

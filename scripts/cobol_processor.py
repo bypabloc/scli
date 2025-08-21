@@ -5,10 +5,11 @@ import sys
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-# Add the src directory to path to import scli modules
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 from menu_utils import confirm, interactive_menu, text_input
 from output_manager import OutputManager
+
+# Add the src directory to path to import scli modules
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 
 DESCRIPTION = "COBOL file processor - Process .cpy and .txt files to interpret data"
 
@@ -923,7 +924,3 @@ def browse_for_file(
         except Exception as e:
             print(f"❌ Error browsing directory: {e}")
             return None
-
-
-if __name__ == "__main__":
-    main()

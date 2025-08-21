@@ -11,9 +11,10 @@ from typing import List, Optional, Set
 
 import pandas as pd
 
+from menu_utils import interactive_menu, text_input
+
 # Add the src directory to path to import scli modules
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
-from menu_utils import interactive_menu, text_input
 
 try:
     from textual import events, on
@@ -61,67 +62,67 @@ class CSVViewerApp(App):
         background: $boost;
         text-style: underline;
     }
-    
+
     Screen {
         background: $surface;
     }
-    
+
     #sidebar {
         width: 30;
         background: $panel;
         border-right: solid $primary;
         padding: 1;
     }
-    
+
     #main-content {
         padding: 1;
     }
-    
+
     #filter-container {
         height: 3;
         margin-bottom: 1;
     }
-    
+
     DataTable {
         height: 100%;
     }
-    
+
     Input {
         margin-right: 1;
     }
-    
+
     Label {
         margin-top: 1;
         margin-bottom: 1;
     }
-    
+
     .column-item {
         height: 1;
         margin-bottom: 1;
     }
-    
+
     #loading-container {
         align: center middle;
         width: 100%;
         height: 100%;
     }
-    
+
     #loading-label {
         text-align: center;
         margin-top: 2;
     }
-    
+
     #pagination-container {
         height: 3;
         margin-top: 1;
         align: center middle;
     }
-    
+
     #page-size-input {
         width: 8;
         margin-right: 1;
     }
-    
+
     .hidden {
         display: none;
     }
@@ -776,7 +777,3 @@ def main():
     app = CSVViewerApp(csv_data)
     app.encoding = encoding  # Store encoding
     app.run()
-
-
-if __name__ == "__main__":
-    main()
