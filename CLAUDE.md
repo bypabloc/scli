@@ -1,512 +1,336 @@
-# SCLI Project Context for Claude Code
+# CLAUDE.md - SCLI Project Context
 
-## Project Overview
+> **2025 Best Practices**: This file provides complete context for Claude Code development. All instructions here take priority over general prompts.
 
-SCLI is a modern Python CLI tool for managing and executing selectable scripts with an interactive interface. Key features include:
+## 🚀 Project Overview
 
-- 🚀 **Interactive Script Selection**: Choose scripts from a beautiful interactive menu
-- 📁 **Dynamic Script Loading**: Automatically discovers Python scripts in the `scripts/` folder  
-- 🎨 **Rich UI**: Beautiful terminal interface with colors and tables using Rich
-- ⚡ **Fast**: Built with Typer for optimal performance
-- 🔧 **Easy to Extend**: Simply add new Python scripts to the `scripts/` folder
-
-## Tech Stack & Dependencies
-
-### Core Framework
-
-- **Python**: 3.12+
-- **Typer**: CLI framework for command handling
-- **Rich**: Terminal rendering and formatting
-- **Inquirer**: Interactive menu system
-- **Textual**: TUI framework for complex interfaces
-
-### Main Dependencies
-
-```python
-dependencies = [
-    "typer>=0.12.0",      # CLI framework
-    "rich>=13.0.0",       # Terminal formatting
-    "inquirer>=3.2.0",    # Interactive menus
-    "textual>=0.47.0",    # Text UI framework
-    "pandas>=2.0.0",      # Data manipulation
-    "questionary>=2.0.0", # User prompts
-    "requests>=2.31.0",   # HTTP requests
-    "pyyaml>=6.0",        # YAML processing
-]
-```
-
-### Optional Dependencies
-
-```python
-pdf = [
-    "PyPDF2>=3.0.0",
-    "PyMuPDF>=1.23.0",
-    "pdf2image>=1.16.0",
-    "Pillow>=10.0.0",
-    "pdfplumber>=0.10.0",
-]
-```
-
-## Project Structure
-
-```text
-scli/
-├── src/scli/             # Main package directory
-│   ├── __init__.py
-│   ├── main.py          # Main CLI entry point with Typer app
-│   ├── script_loader.py # Dynamic script discovery and execution
-│   ├── menu_utils.py    # Interactive menu utilities
-│   ├── config_loader.py # Configuration management
-│   ├── logger.py        # Logging configuration
-│   └── output_manager.py # Output formatting utilities
-├── scripts/             # Script directory (auto-discovered)
-│   ├── hello_world.py   # Simple test script
-│   ├── system_info.py   # System information display
-│   ├── file_counter.py  # File counting by extension
-│   ├── csv_viewer.py    # Interactive CSV viewer with Textual
-│   ├── network_tools.py # Network diagnostic tools
-│   ├── cobol_processor.py # COBOL file processing
-│   ├── consumer_debt_checker.py # Consumer debt checking
-│   ├── pdf_converter.py # PDF conversion utilities
-│   └── log_analyzer.py  # Log file analysis
-├── pyproject.toml       # Project configuration
-├── uv.lock             # Dependency lock file
-└── README.md           # Project documentation
-```
-
-## Installation
-
-### Install uv (if not already installed)
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-### Using uv (recommended)
-
-```bash
-uv sync
-```
-
-### Using pip
-
-```bash
-pip install -e .
-```
-
-## Commands & Build Scripts
-
-### Development Commands
-
-```bash
-# Install dependencies using uv (recommended)
-uv sync
-uv sync --group dev  # Include dev dependencies
-
-# Install using pip (alternative)
-pip install -e .
-
-# Run the CLI
-scli                     # Interactive mode
-scli -s script_name      # Direct script execution
-scli run                 # Interactive mode (alternative)
-scli run script_name     # Run specific script
-scli list-scripts        # List all available scripts
-scli info               # Show CLI information
-
-# Development mode (before installation)
-python -m scli          # Run from module
-python -m scli -s script_name
-```
-
-### Testing & Quality Commands
-
-```bash
-# Run tests
-pytest
-
-# Code formatting
-black src/
-ruff check src/
-
-# Type checking (if configured)
-# mypy src/  # Not currently configured but recommended
-```
-
-### Build & Distribution
-
-```bash
-# Build package
-uv build
-
-# Install from built package
-uv pip install dist/scli-*.whl
-
-# Install in development mode
-uv pip install -e .
-```
-
-## Usage
-
-### Interactive Mode (Main Feature)
-
-```bash
-scli
-```
-
-### Run Specific Script Directly
-
-```bash
-scli -s hello_world
-```
-
-### Alternative Commands
-
-```bash
-scli run                    # Interactive mode
-scli run hello_world        # Run specific script
-scli list-scripts          # List all available scripts
-scli info                  # Show information
-```
-
-## Adding New Scripts
-
-1. Create a new Python file in the `scripts/` folder
-2. Add a `DESCRIPTION` variable with a description of what the script does
-3. Implement a `main()` function that contains your script logic
-
-Example script structure:
-
-```python
-DESCRIPTION = "Your script description here"
-
-def main():
-    print("Your script logic here")
-    # Add your code
-```
-
-## Example Scripts Included
-
-- **hello_world.py**: Simple hello world example
-- **system_info.py**: Display system information
-- **file_counter.py**: Count files by extension in current directory
-- **csv_viewer.py**: Interactive CSV viewer with filtering and pagination
-- **network_tools.py**: Network diagnostic tools (ping, port check, DNS lookup)
-- **cobol_processor.py**: COBOL file processing utilities
-- **consumer_debt_checker.py**: Consumer debt checking tools
-- **pdf_converter.py**: PDF conversion utilities
-- **log_analyzer.py**: Log file analysis tools
-
-## Code Style Guidelines
-
-### Python Code Standards
-
-- **Python Version**: 3.12+ with modern type hints
-- **Import Style**: Use absolute imports for package modules
-- **Module Structure**: Each script must have `DESCRIPTION` variable and `main()` function
-- **Error Handling**: Always use try-except blocks in script execution
-- **Type Hints**: Use type hints for function parameters and returns
-
-### Script Development Pattern
-
-All scripts in the `scripts/` directory must follow this structure:
-
-```python
-DESCRIPTION = "Your script description here"
-
-def main():
-    """Main entry point for the script"""
-    # Script logic here
-    pass
-```
-
-### Interactive UI Guidelines
-
-- Use emoji icons for visual clarity in menus
-- Implement fallback for non-TTY environments
-- Always provide keyboard shortcuts and help text
-- Use Rich console for colored output
-- Handle KeyboardInterrupt gracefully
-
-### Import Pattern for Scripts
-
-Scripts should add the src directory to path when importing scli modules:
-
-```python
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
-from scli.menu_utils import interactive_menu, text_input, confirm
-```
-
-## Core Files & Utilities
-
-### Main Entry Points
-
-- `src/scli/main.py`: Typer app definition and command handlers
-- `src/scli/__main__.py`: Module execution entry point
-
-### Key Modules
-
-- `script_loader.py`: Discovers and executes scripts dynamically
-- `menu_utils.py`: Provides `interactive_menu()`, `text_input()`, `confirm()` functions
-- `config_loader.py`: Handles configuration loading
-- `logger.py`: Configures logging for the application
-- `output_manager.py`: Manages output formatting
-
-### Script Examples
-
-- **csv_viewer.py**: Complex Textual app for CSV viewing with pagination
-- **network_tools.py**: Network diagnostics (ping, port check, DNS)
-- **system_info.py**: System information display
-- **file_counter.py**: File counting by extension
-
-## Development
-
-### Development Mode (Before Installation)
-
-If you want to test the CLI without installing it, use the module execution method:
-
-```bash
-# Activate virtual environment
-source .venv/bin/activate
-
-# Interactive mode
-python -m scli
-
-# Run specific script directly
-python -m scli -s script_name
-
-# List all available scripts
-python -m scli list-scripts
-
-# Show CLI information
-python -m scli info
-
-# Alternative commands
-python -m scli run                    # Interactive mode
-python -m scli run hello_world        # Run specific script
-```
-
-### Development Dependencies
-
-Install development dependencies:
-
-```bash
-uv sync --group dev
-```
-
-Run tests:
-
-```bash
-pytest
-```
-
-Format code:
-
-```bash
-black src/
-ruff check src/
-```
-
-## Production Build
-
-### Build and Install Locally
-
-```bash
-# Build the package
-uv build
-
-# Install from built package
-uv pip install dist/scli-*.whl
-```
-
-### Install from Source (Editable)
-
-```bash
-# Install in development mode (recommended for testing)
-uv pip install -e .
-
-# Now you can use the CLI directly
-scli                    # Interactive mode
-scli -s script_name     # Direct execution
-```
-
-### Build Distribution
-
-```bash
-# Create source and wheel distributions
-uv build
-
-# Files will be created in dist/
-# - scli-0.1.0.tar.gz (source distribution)
-# - scli-0.1.0-py3-none-any.whl (wheel distribution)
-```
-
-### Install from PyPI (Future)
-
-```bash
-# When published to PyPI
-pip install scli
-```
-
-## Repository Conventions
-
-### Git Workflow
-
-- **Main branch**: `master`
-- **Development branch**: `dev`
-- **Feature branches**: `feature/description`
-- Use pull requests for merging to master
-- Write clear commit messages
-
-### File Naming
-
-- Python files: lowercase with underscores (`script_name.py`)
-- Classes: PascalCase (`ScriptLoader`)
-- Functions: lowercase with underscores (`interactive_menu`)
-- Constants: UPPERCASE (`DESCRIPTION`)
-
-## Important Notes & Warnings
-
-### IMPORTANT: Script Discovery
-
-- Scripts are auto-discovered from the `scripts/` directory
-- Each script MUST have a `main()` function and `DESCRIPTION` variable
-- Scripts are loaded dynamically using importlib
-
-### IMPORTANT: Error Handling
-
-- Always handle exceptions in script execution
-- Provide fallback for non-TTY environments
-- Use try-except blocks for file operations
-
-### IMPORTANT: Dependencies
-
-- Use `uv` package manager for dependency management
-- Check if optional dependencies are installed before using them
-- Handle import errors gracefully with informative messages
-
-## Testing Guidelines
-
-### Unit Testing
-
-- Test files should be named `test_*.py`
-- Use pytest for testing framework
-- Mock external dependencies when testing
-
-### Manual Testing
-
-- Test scripts in both TTY and non-TTY environments
-- Verify keyboard shortcuts work correctly
-- Test with different terminal sizes
-
-## Performance Considerations
-
-### CSV Viewer Optimization
-
-- Uses pagination with default 1000 rows per page
-- Implements chunk reading for large files
-- Lazy loading of data on demand
-
-### Script Loading
-
-- Scripts are loaded only when needed
-- Module caching prevents repeated imports
-- Dynamic discovery happens once per session
-
-## Security Notes
-
-### Input Validation
-
-- Always validate user input in scripts
-- Sanitize file paths and prevent directory traversal
-- Use proper encoding when reading files
-
-### Network Tools
-
-- Implement timeouts for network operations
-- Validate host names and port numbers
-- Handle network errors gracefully
-
-## Common Workflows
-
-### Adding a New Script
-
-1. Create a new Python file in `scripts/` directory
-2. Add `DESCRIPTION` variable at module level
-3. Implement `main()` function with script logic
-4. Import scli utilities if needed (menu_utils, etc.)
-5. Test the script using `scli -s script_name`
-
-### Debugging Scripts
-
-```bash
-# Run with Python directly for debugging
-python scripts/script_name.py
-
-# Use the module execution for testing
-python -m scli -s script_name
-```
-
-### Building for Distribution
-
-```bash
-# Clean previous builds
-rm -rf dist/ build/
-
-# Build new distribution
-uv build
-
-# Test installation
-pip install dist/scli-*.whl
-
-# Upload to PyPI (when ready)
-# twine upload dist/*
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **ImportError in scripts**: Ensure src directory is added to path
-2. **TTY not available**: Fallback menus will be used automatically
-3. **Encoding errors**: Scripts try multiple encodings (utf-8, latin-1, cp1252)
-4. **Missing dependencies**: Install with `uv sync` or check optional dependencies
-
-### Debug Mode
-
-Set environment variables for debugging:
-
-```bash
-export SCLI_DEBUG=1  # If implemented
-python -m scli
-```
-
-## Future Enhancements
-
-### Planned Features
-
-- Configuration file support (YAML/TOML)
-- Script categories and grouping
-- Script parameter support
-- Plugin system for external scripts
-- Improved logging and debugging
-
-### Architecture Improvements
-
-- Async script execution support
-- Script dependency management
-- Better error reporting with stack traces
-- Performance monitoring
-
-## Contact & Support
-
-- **Author**: bypabloc
-- **Email**: bypabloc@example.com
-- **Repository**: GitHub repository for SCLI project
-- **Issues**: Report bugs in GitHub Issues
+**SCLI** is an **interactive CLI application** built with modern Python practices, featuring dynamic spinners, argument validation, and comprehensive logging. This is a production-ready CLI tool focused on user experience and code quality.
 
 ---
 
-**Note**: This file is designed to provide comprehensive context to Claude Code for understanding and working with the SCLI project. Keep it updated as the project evolves.
+## 📋 Tech Stack & Versions
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **Python** | 3.12+ | Core runtime (required) |
+| **uv** | Latest | Package manager & virtual environment |
+| **Loguru** | ≥0.7.3 | Advanced logging with colors & formatting |
+| **Rich** | ≥14.1.0 | Terminal UI components |
+| **Survey** | ≥5.4.2 | Interactive CLI prompts |
+| **Typer** | ≥0.17.3 | CLI framework |
+| **pytest** | ≥8.4.1 | Testing framework (dev) |
+
+---
+
+## 🏗️ Project Architecture
+
+### Directory Structure
+```
+scli/
+├── src/                      # Source code (main package)
+│   ├── main.py              # Entry point (MINIMAL - delegates to utils)
+│   └── utils/               # Business logic (ALL functions here)
+│       ├── logger.py        # Centralized logging with Loguru
+│       ├── argument_parser.py # Named flags validation
+│       ├── spinner.py       # Dynamic loading indicators
+│       └── docstring_generator.py # Auto docstring creation
+├── tests/                   # Testing (NO unit tests - integration + e2e only)
+│   ├── integration/         # Integration tests (70%)
+│   └── e2e/                 # End-to-end tests (30%)
+├── pyproject.toml          # Project configuration
+└── CLAUDE.md              # This file
+```
+
+### Architecture Principles
+1. **utils/ pattern**: ALL reusable functions go in `src/utils/`
+2. **Minimal main.py**: Entry point only, no business logic
+3. **No unit tests**: Only integration (70%) and e2e (30%) tests
+4. **TDD mandatory**: Test-first development always
+
+---
+
+## 🔧 Essential Commands
+
+### Development Workflow
+```bash
+# Setup (first time)
+uv sync                      # Install dependencies & create .venv
+
+# Daily development
+uv run scli [--flags]        # Run application
+uv run python -c "from src.utils.logger import logger; logger.info('test')"  # Test utils
+
+# Testing
+python tests/run.py          # Run all tests (integration + e2e)
+python tests/run.py --integration  # Integration tests only
+python tests/run.py --e2e    # E2E tests only
+python tests/run.py --fast   # Exclude slow tests
+python tests/run.py --coverage # Run with coverage report
+
+# Git workflow
+git config --global user.name   # Check author (used in docstrings)
+date +%Y-%m-%d                  # Current date for docstrings
+```
+
+### Package Management
+```bash
+uv add [package]             # Add production dependency
+uv add --dev [package]       # Add development dependency  
+uv remove [package]          # Remove dependency
+uv tree                      # Show dependency tree
+```
+
+---
+
+## 🎯 Development Rules & Context
+
+### 1. 🚨 MANDATORY TDD Workflow
+```
+1. Write failing test FIRST (Red)
+2. Write minimal code to pass (Green)  
+3. Refactor and improve (Refactor)
+4. NEVER skip this cycle
+```
+
+### 2. Import Organization (STRICT)
+```python
+# ALWAYS use this 3-section structure (no comments):
+import sys
+from typing import List
+
+from django.contrib.auth.models import User
+from third_party_package import something
+
+from src.utils.logger import logger
+from src.utils.argument_parser import validate_named_flags_only
+```
+
+**Rules:**
+- ✅ 3 sections: Native → Third-party → Project files
+- ✅ Blank lines between sections
+- ✅ Specific imports: `from typing import Dict` not `import typing`
+- ✅ One import per line for project files
+- ❌ NO section comments
+- ❌ NO mixing imports from different categories
+
+### 3. Logger Format (ENFORCED)
+```python
+# ✅ CORRECT - Plain string + detail dict
+logger.info("User logged in", detail={"user_id": user_id, "timestamp": now})
+logger.error("Database connection failed", detail={"host": host, "port": port})
+
+# ❌ FORBIDDEN - f-strings or b-strings  
+logger.info(f"User {user_id} logged in")  # Will raise ValueError
+```
+
+**Logger Rules:**
+- ✅ First argument: Plain string only
+- ✅ Second argument: `detail` dict (optional, not printed)
+- ✅ Use: `logger.info()`, `logger.success()`, `logger.error()`, `logger.critical()`
+- ❌ NEVER use `print()` - always use logger
+- ❌ NEVER use `as e` in except blocks - use `logger.critical()`
+
+### 4. Docstring Requirements (MANDATORY)
+```python
+def example_function(param: str) -> Dict:
+    """
+    Brief description of what the function does.
+
+    Parameters
+    ----------
+    param : str
+        Description of the parameter
+
+    Returns
+    -------
+    Dict
+        Description of return value
+
+    Examples
+    --------
+    >>> example_function("test")
+    {'result': 'processed'}
+    
+    >>> example_function("")
+    {'result': 'empty'}
+
+    :Authors:
+        - Pablo Contreras
+
+    :Created:
+        - 2025-08-30
+    """
+```
+
+**Docstring Rules:**
+- ✅ ALL functions, methods, and classes MUST have docstrings
+- ✅ Use `git config --global user.name` for author (Pablo Contreras)
+- ✅ Use current date for :Created: (`date +%Y-%m-%d`)
+- ✅ Include Examples section with doctests
+- ✅ Update :Updated: date when modifying function I/O
+- ✅ Examples must reflect current functionality
+
+### 5. Argument Validation (STRICT)
+```python
+# ✅ CORRECT - Named flags only
+scli --test value --flag
+scli --option1 value1 --option2
+
+# ❌ FORBIDDEN - Positional arguments
+scli command value           # Will be rejected
+scli --flag value extra      # Will be rejected
+```
+
+---
+
+## 🔄 Git Workflow & Repository Etiquette
+
+### Branch Naming Convention
+```bash
+# Feature development
+feature/add-spinner-utility
+feature/refactor-logger-validation
+
+# Bug fixes  
+fix/argument-parser-validation
+fix/logger-format-issues
+
+# Refactoring
+refactor/move-functions-to-utils
+refactor/improve-docstring-format
+```
+
+### Commit Standards
+```bash
+# Use conventional commits
+feat(core): add dynamic spinner with morphing text
+fix(logger): resolve f-string validation error
+docs(claude): update import organization rules
+refactor(utils): move argument parsing to utils module
+
+# Auto-generated suffix (required)
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### Merge Strategy
+- ✅ **Prefer merge commits** over rebase for feature branches
+- ✅ Squash commits only for small, single-purpose changes
+- ✅ Always run tests before merging: `python tests/run.py`
+
+---
+
+## 📁 File Context & Access Rules
+
+### Files Claude CAN Read
+```
+✅ src/main.py                 # Entry point
+✅ src/utils/*.py              # All utility modules  
+✅ tests/integration/*.py      # Integration tests
+✅ tests/e2e/*.py             # E2E tests
+✅ tests/run.py               # Test runner
+✅ pyproject.toml             # Project config
+✅ README.md                  # User documentation
+✅ CLAUDE.md                  # This context file
+```
+
+### Files Claude Should AVOID
+```
+❌ .venv/                     # Virtual environment
+❌ __pycache__/               # Python cache
+❌ .git/                      # Git internals
+❌ logs/                      # Log files (if created)
+```
+
+---
+
+## 🧪 Testing Philosophy
+
+### Core Principles
+1. **NO unit tests** - They create mocking that damages code quality
+2. **Integration tests (70%)** - Test components working together
+3. **E2E tests (30%)** - Test complete user workflows
+4. **Test real behavior** - No mocks, no isolated function tests
+
+### Test Structure
+```python
+# Integration test example
+def test_argument_validation_integration():
+    """Test argument parser with logger integration."""
+    # Test real interaction between components
+    
+# E2E test example  
+def test_complete_user_workflow():
+    """Test full CLI usage from user perspective."""
+    # Test complete user journey
+```
+
+### Test Execution
+```bash
+# Primary test command
+python tests/run.py                    # All tests
+
+# Specific test types
+python tests/run.py --integration     # Component integration
+python tests/run.py --e2e             # End-to-end workflows
+python tests/run.py --fast            # Exclude @pytest.mark.slow
+python tests/run.py --coverage        # With coverage report
+```
+
+---
+
+## 🚨 Critical Instructions for Claude
+
+### When Making Changes
+1. **Always check imports** - Ensure 3-section organization
+2. **Update docstrings** - When function I/O changes  
+3. **Run tests** - `python tests/run.py` before completing tasks
+4. **Follow TDD** - Write failing test first, then implementation
+5. **Use utils/ pattern** - Move reusable code to utils modules
+
+### When Encountering Errors
+1. **Check logger validation** - Ensure plain strings only
+2. **Verify imports** - Check section organization and naming
+3. **Test environment** - Run `uv sync` if dependency issues
+4. **Review CLAUDE.md** - This file contains the source of truth
+
+### Communication Style
+- ✅ Be concise and direct (< 4 lines unless detail requested)
+- ✅ Focus on specific user requests only
+- ✅ Provide code examples when helpful
+- ❌ Avoid unnecessary preambles or explanations
+- ❌ Don't add extra context unless asked
+
+---
+
+## 📊 Quality Checklist
+
+Before completing any task, verify:
+
+- [ ] **🚨 TDD**: Failing test written BEFORE implementation
+- [ ] **Tests pass**: `python tests/run.py` successful
+- [ ] **Imports organized**: 3-section structure (Native → Third-party → Project)
+- [ ] **Logger format**: Plain strings + detail dict only
+- [ ] **Docstrings current**: Match function I/O, include Examples
+- [ ] **Utils architecture**: Reusable functions in `src/utils/`
+- [ ] **No print() statements**: Use logger instead
+- [ ] **Named flags only**: CLI arguments validated
+- [ ] **Code follows patterns**: Consistent with existing codebase
+
+---
+
+## 🔍 Context Summary
+
+**Project Type**: Interactive CLI application with modern Python practices  
+**Architecture**: utils/ pattern with minimal main.py entry point  
+**Testing**: Integration + E2E only (no unit tests)  
+**Development**: Strict TDD workflow with comprehensive logging  
+**Key Features**: Dynamic spinners, argument validation, structured logging  
+
+**Current Focus**: Building robust CLI utilities with excellent developer experience and user interface.
+
+---
+
+*Last Updated: 2025-08-30*  
+*Version: 2.0 (2025 Best Practices Edition)*
