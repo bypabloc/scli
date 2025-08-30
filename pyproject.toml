@@ -1,26 +1,22 @@
 [project]
 name = "scli"
 version = "0.1.0"
-description = "A CLI tool for executing selectable scripts"
-authors = [{name = "bypabloc", email = "bypabloc@example.com"}]
-readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "typer>=0.12.0",
-    "rich>=13.0.0",
-    "inquirer>=3.2.0",
-    "textual>=0.47.0",
-    "pandas>=2.0.0",
-    "questionary>=2.0.0",
-    "requests>=2.31.0",
-    "pyyaml>=6.0",
-    "pycodestyle>=2.14.0",
-    "autopep8>=2.3.2",
-    "pydantic>=2.11.7",
+description = "A Python CLI project"
+authors = [
+    { name = "bypabloc", email = "bypabloc@example.com" },
 ]
+dependencies = [
+    "loguru>=0.7.3",
+    "rich>=14.1.0",
+    "survey>=5.4.2",
+    "typer>=0.17.3",
+]
+requires-python = ">=3.12"
+readme = "README.md"
+license = { text = "MIT" }
 
 [project.scripts]
-scli = "src.main:app"
+scli = "src.main:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -29,25 +25,11 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
 
-[dependency-groups]
-dev = [
-    "autoflake>=2.3.1",
-    "autopep8>=2.3.2",
-    "black>=25.1.0",
-    "isort>=6.0.1",
-    "ruff>=0.12.4",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "black>=23.0.0",
-    "ruff>=0.1.0",
-]
-pdf = [
-    "PyPDF2>=3.0.0",
-    "PyMuPDF>=1.23.0",
-    "pdf2image>=1.16.0",
-    "Pillow>=10.0.0",
-    "pdfplumber>=0.10.0",
+[tool.uv]
+dev-dependencies = [
+    "coverage>=7.10.6",
+    "pytest>=8.4.1",
+    "pytest-console-scripts>=1.4.1",
+    "pytest-cov>=6.2.1",
+    "pytest-mock>=3.14.1",
 ]

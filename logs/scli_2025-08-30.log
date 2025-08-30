@@ -1,0 +1,166 @@
+2025-08-30 13:40:47 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:40:47 | INFO     | src.main:main:108 | Parsed arguments: {'test': 'asd'}
+2025-08-30 13:40:51 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:40:51 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:40:51 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'help': True}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'flag': 'value'}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'verbose': True, 'output': 'file.txt'}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'help': True}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'file': 'example.txt'}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'verbose': True, 'output': 'result.txt'}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'test': 'asd'}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'help': True}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'help': True}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'version': True}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'flag': 'value'}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | ERROR    | src.main:main:102 | ❌ Error: Only named flags (--option) are allowed.
+2025-08-30 13:43:37 | ERROR    | src.main:main:103 | Use --help for usage information.
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {}
+2025-08-30 13:43:37 | INFO     | tests.integration.logger:test_logger_import_and_basic_functionality:31 | Test info message
+2025-08-30 13:43:37 | SUCCESS  | tests.integration.logger:test_logger_import_and_basic_functionality:32 | Test success message
+2025-08-30 13:43:37 | WARNING  | tests.integration.logger:test_logger_import_and_basic_functionality:33 | Test warning message
+2025-08-30 13:43:37 | INFO     | tests.integration.logger:test_logger_levels_integration:51 | Info message
+2025-08-30 13:43:37 | SUCCESS  | tests.integration.logger:test_logger_levels_integration:52 | Success message
+2025-08-30 13:43:37 | WARNING  | tests.integration.logger:test_logger_levels_integration:53 | Warning message
+2025-08-30 13:43:37 | ERROR    | tests.integration.logger:test_logger_levels_integration:54 | Error message
+2025-08-30 13:43:37 | CRITICAL | tests.integration.logger:test_logger_levels_integration:55 | Critical message
+2025-08-30 13:43:37 | CRITICAL | src.utils.logger:log_exception:220 | Test exception context
+Traceback (most recent call last):
+  File "/home/bypabloc/projects/bypabloc/scli/tests/integration/logger.py", line 75, in test_log_exception_integration
+    raise ValueError("Test exception for logging")
+ValueError: Test exception for logging
+
+2025-08-30 13:43:37 | INFO     | src.utils.logger:log_command_execution:194 | Executing command: test_command
+2025-08-30 13:43:37 | SUCCESS  | src.utils.logger:log_file_operation:200 | File operation completed: read on /path/to/file
+2025-08-30 13:43:37 | INFO     | src.utils.logger:log_system_info:207 | [test_component] Test message
+2025-08-30 13:43:37 | INFO     | tests.integration.logger:test_logger_file_creation_integration:112 | Test message for file logging
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'test': 'value'}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'help': True}
+2025-08-30 13:43:37 | SUCCESS  | __main__:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | __main__:main:108 | Parsed arguments: {}
+2025-08-30 13:43:37 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:43:37 | INFO     | src.main:main:108 | Parsed arguments: {'invalid-flag': True}
+2025-08-30 13:45:20 | SUCCESS  | src.main:main:97 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:45:20 | INFO     | src.main:main:108 | Parsed arguments: {'test': 'logging_works'}
+2025-08-30 13:46:54 | SUCCESS  | src.utils.logger:success:134 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:46:54 | INFO     | src.utils.logger:info:130 | Parsed arguments: {'test': 'logger_fixed'}
+2025-08-30 13:47:53 | SUCCESS  | src.utils.logger:success:134 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:47:53 | INFO     | src.utils.logger:info:130 | Parsed arguments: {'test': 'final_clean'}
+2025-08-30 13:48:48 | SUCCESS  | src.utils.logger:success:134 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:48:48 | INFO     | src.utils.logger:info:130 | Parsed arguments: {'logger': 'test_final'}
+2025-08-30 13:50:39 | SUCCESS  | src.utils.logger:success:134 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:50:39 | INFO     | src.utils.logger:info:130 | Parsed arguments: {'utils': 'moved_successfully'}
+2025-08-30 13:51:38 | SUCCESS  | src.utils.logger:success:134 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:51:38 | INFO     | src.utils.logger:info:130 | Parsed arguments: {'test': 'asd'}
+2025-08-30 13:53:01 | SUCCESS  | src.utils.logger:success:134 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:53:01 | INFO     | src.utils.logger:info:130 | Parsed arguments: {'test': 'working_now'}
+2025-08-30 13:54:35 | SUCCESS  | src.utils.logger:success:134 | 🚀 SCLI - Python CLI Project
+2025-08-30 13:54:35 | INFO     | src.utils.logger:info:130 | Parsed arguments: {'test': 'asd'}
+2025-08-30 13:58:05 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:134 (success) | 🚀 SCLI - Python CLI Project
+2025-08-30 13:58:05 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:130 (info) | Parsed arguments: {'format': 'test_vscode_navigation'}
+2025-08-30 13:58:10 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:134 (success) | 🚀 SCLI - Python CLI Project
+2025-08-30 13:58:10 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:130 (info) | Parsed arguments: {'test': 'asd'}
+2025-08-30 13:58:57 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:134 (success) | 🚀 SCLI - Python CLI Project
+2025-08-30 13:58:57 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:130 (info) | Parsed arguments: {'test': 'relative_path'}
+2025-08-30 13:59:30 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:158 (success) | 🚀 SCLI - Python CLI Project
+2025-08-30 13:59:30 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:154 (info) | Parsed arguments: {'test': 'src_relative'}
+2025-08-30 13:59:54 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:158 (success) | 🚀 SCLI - Python CLI Project
+2025-08-30 13:59:54 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:154 (info) | Parsed arguments: {'test': 'asd'}
+2025-08-30 14:00:32 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:158 (success) | 🚀 SCLI - Python CLI Project
+2025-08-30 14:00:32 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:154 (info) | Parsed arguments: {'test': 'newlines_fixed'}
+2025-08-30 14:00:45 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:158 (success) | 🚀 SCLI - Python CLI Project
+2025-08-30 14:00:45 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:154 (info) | Parsed arguments: {'test': 'asd'}
+2025-08-30 14:02:29 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:158 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:02:29 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:154 | Parsed arguments: {'test': 'function_removed'}
+2025-08-30 14:06:42 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:06:42 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | Parsed arguments
+2025-08-30 14:11:14 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:11:14 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | Parsed arguments
+2025-08-30 14:12:18 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:12:18 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | Parsed arguments
+2025-08-30 14:15:16 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:15:16 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | Parsed arguments
+2025-08-30 14:15:47 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:15:47 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | Parsed arguments
+2025-08-30 14:16:36 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | Test info message
+2025-08-30 14:16:36 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | Test success message
+2025-08-30 14:17:00 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:17:00 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | Parsed arguments
+2025-08-30 14:17:10 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:17:10 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:200 | Parsed arguments
+2025-08-30 14:18:10 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:219 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:18:10 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:216 | Parsed arguments
+2025-08-30 14:18:19 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:219 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:18:19 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:216 | Parsed arguments
+2025-08-30 14:18:24 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:221 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:18:24 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:218 | Parsed arguments
+2025-08-30 14:18:44 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:229 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:18:44 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:226 | Parsed arguments
+2025-08-30 14:19:06 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:208 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:19:06 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:205 | Parsed arguments | {"parsed_args":{"test":"asd"}}
+2025-08-30 14:19:09 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:208 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:19:09 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:205 | Parsed arguments | {"parsed_args":{"test":"asd"}}
+2025-08-30 14:19:14 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:208 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:19:14 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:205 | Parsed arguments | {"parsed_args":{"test":"asd"}}
+2025-08-30 14:58:42 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:208 | 🚀 SCLI - Python CLI Project
+2025-08-30 14:58:42 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:205 | Parsed arguments | {"parsed_args":{"test":"asd"}}
+2025-08-30 15:06:15 | SUCCESS  | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:208 | 🚀 SCLI - Python CLI Project
+2025-08-30 15:06:15 | INFO     | /home/bypabloc/projects/bypabloc/scli/src/utils/logger.py:205 | Parsed arguments | {"parsed_args":{"test":"asd"}}

@@ -1,157 +1,104 @@
-# SCLI - Script CLI Tool
+# SCLI - Python CLI Project
 
-A modern Python CLI tool for managing and executing selectable scripts with an interactive interface.
+Un proyecto CLI desarrollado con Python 3.12 y uv como gestor de paquetes.
 
-## Features
+## Instalación
 
-- 🚀 **Interactive Script Selection**: Choose scripts from a beautiful interactive menu
-- 📁 **Dynamic Script Loading**: Automatically discovers Python scripts in the `scripts/` folder
-- 🎨 **Rich UI**: Beautiful terminal interface with colors and tables using Rich
-- ⚡ **Fast**: Built with Typer for optimal performance
-- 🔧 **Easy to Extend**: Simply add new Python scripts to the `scripts/` folder
+### Requisitos previos
+- Python 3.12 o superior
+- uv (gestor de paquetes)
 
-## Installation
+### Pasos de instalación
 
-### Install uv (if not already installed)
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+1. Clonar o descargar el proyecto
+2. Navegar al directorio del proyecto
+3. Instalar dependencias y crear entorno virtual:
 
-### Using uv (recommended)
 ```bash
 uv sync
 ```
 
-### Using pip
+## Ejecución
+
+### Usando el comando scli
 ```bash
-pip install -e .
+# Ejecutar con argumentos
+uv run scli
+
+# Ejecutar con argumentos específicos
+uv run scli --help
 ```
 
-## Usage
-
-### Interactive Mode (Main Feature)
+### Ejecutar directamente src/main.py
 ```bash
-scli
-```
+# Usando uv run
+uv run python src/main.py
 
-### Run Specific Script Directly
-```bash
-scli -s hello_world
-```
-
-### Alternative Commands
-```bash
-scli run                    # Interactive mode
-scli run hello_world        # Run specific script
-scli list-scripts          # List all available scripts
-scli info                  # Show information
-```
-
-## Adding New Scripts
-
-1. Create a new Python file in the `scripts/` folder
-2. Add a `DESCRIPTION` variable with a description of what the script does
-3. Implement a `main()` function that contains your script logic
-
-Example script structure:
-```python
-DESCRIPTION = "Your script description here"
-
-def main():
-    print("Your script logic here")
-    # Add your code
-```
-
-## Example Scripts Included
-
-- **hello_world.py**: Simple hello world example
-- **system_info.py**: Display system information
-- **file_counter.py**: Count files by extension in current directory
-
-## Requirements
-
-- Python 3.12+
-- typer
-- rich
-
-## Development
-
-### Development Mode (Before Installation)
-
-If you want to test the CLI without installing it, use the module execution method:
-
-```bash
-# Activate virtual environment
+# O activando el entorno virtual
 source .venv/bin/activate
-
-# Interactive mode
-python -m scli
-
-# Run specific script directly
-python -m scli -s script_name
-
-# List all available scripts
-python -m scli list-scripts
-
-# Show CLI information
-python -m scli info
-
-# Alternative commands
-python -m scli run                    # Interactive mode
-python -m scli run hello_world        # Run specific script
+python src/main.py
 ```
 
-### Development Dependencies
-
-Install development dependencies:
+### Agregar dependencias
 ```bash
-uv sync --group dev
+uv add <nombre-del-paquete>
 ```
 
-Run tests:
+## Testing
+
+### Ejecutar tests
 ```bash
-pytest
+# Todos los tests (integration + e2e)
+python tests/run.py
+
+# Solo integration tests (más rápidos)
+python tests/run.py --integration
+
+# Solo e2e tests (más lentos)
+python tests/run.py --e2e
+
+# Tests rápidos (excluir lentos)
+python tests/run.py --fast
+
+# Tests con coverage
+python tests/run.py --coverage
 ```
 
-Format code:
+### Filosofía de testing
+- **Integration tests (70%)**: Componentes trabajando juntos sin mocks
+- **E2E tests (30%)**: Workflows completos de usuario
+- **Sin unit tests**: Evitamos mocks complejos que ensucian el código
+
+### TDD Workflow
 ```bash
-black src/
-ruff check src/
+# 1. Escribir test que falle
+echo "Test que falla..." && python tests/run.py  # ❌ 1 FAILING
+
+# 2. Código mínimo para pasar
+echo "Implementando..." && python tests/run.py   # ✅ ALL PASSING
+
+# 3. Refactorizar
+echo "Mejorando..." && python tests/run.py      # ✅ ALL PASSING
 ```
 
-## Production Build
+## Estructura del proyecto
 
-### Build and Install Locally
-```bash
-# Build the package
-uv build
-
-# Install from built package
-uv pip install dist/scli-*.whl
 ```
-
-### Install from Source (Editable)
-```bash
-# Install in development mode (recommended for testing)
-uv pip install -e .
-
-# Now you can use the CLI directly
-scli                    # Interactive mode
-scli -s script_name     # Direct execution
-```
-
-### Build Distribution
-```bash
-# Create source and wheel distributions
-uv build
-
-# Files will be created in dist/
-# - scli-0.1.0.tar.gz (source distribution)
-# - scli-0.1.0-py3-none-any.whl (wheel distribution)
-```
-
-### Install from PyPI (Future)
-```bash
-# When published to PyPI
-pip install scli
+scli/
+├── src/
+│   ├── __init__.py
+│   └── main.py          # Punto de entrada principal
+├── tests/               # Tests organizados por tipo
+│   ├── run.py          # Test runner principal
+│   ├── conftest.py     # Fixtures compartidos
+│   ├── integration/    # Tests de integración (70%)
+│   │   ├── cli.py
+│   │   └── main.py
+│   └── e2e/           # Tests end-to-end (30%)
+│       └── cli.py
+├── pyproject.toml       # Configuración del proyecto
+├── pytest.ini         # Configuración de pytest
+├── CLAUDE.md          # Contexto y reglas del proyecto
+├── README.md          # Este archivo
+└── .venv/             # Entorno virtual (generado automáticamente)
 ```

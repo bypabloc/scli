@@ -1,184 +1,256 @@
 """
-Logging configuration for SCLI
-Provides structured logging with different levels and file output
+SCLI Logging Utility
+
+Centralized logging system using Loguru with enhanced console and file output.
+Provides colored console logs with file path, datetime, and structured formatting.
+
+Best practices:
+- NEVER use print() directly, always use this logger
+- Use appropriate log levels: trace, debug, info, success, warning, error, critical
+- Include context with extra information when needed
+- Configure rotation and retention for production use
 """
 
-import logging
 import sys
-from datetime import datetime
+import os
 from pathlib import Path
+from typing import Any
+from traceback import format_exc as traceback_format_exc
+from loguru import logger as loguru_instance
 
 
-class ColoredFormatter(logging.Formatter):
-    """Colored formatter for console output"""
-
-    COLORS = {
-        "DEBUG": "\033[36m",  # Cyan
-        "INFO": "\033[32m",  # Green
-        "WARNING": "\033[33m",  # Yellow
-        "ERROR": "\033[31m",  # Red
-        "CRITICAL": "\033[35m",  # Magenta
-        "RESET": "\033[0m",  # Reset
-    }
-
-    def format(self, record):
-        # Add color to levelname
-        if record.levelname in self.COLORS:
-            record.levelname = f"{self.COLORS[record.levelname]}{record.levelname}{self.COLORS['RESET']}"
-
-        return super().format(record)
-
-
-def setup_logger(
-    name: str = None, level: str = "INFO", log_to_file: bool = True
-) -> logging.Logger:
-    """Setup logger with console and file handlers"""
-
-    # Get or create logger
-    if name is None:
-        name = "scli"
-
-    logger = logging.getLogger(name)
-
-    # Avoid duplicate handlers
-    if logger.handlers:
-        return logger
-
-    # Set level
-    numeric_level = getattr(logging, level.upper(), logging.INFO)
-    logger.setLevel(numeric_level)
-
-    # Create formatters
-    console_formatter = ColoredFormatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S"
-    )
-
-    file_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s() - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(numeric_level)
-    console_handler.setFormatter(console_formatter)
-    logger.addHandler(console_handler)
-
-    # File handler (if enabled)
-    if log_to_file:
-        try:
-            # Find project root
-            current_dir = Path(__file__).parent
-            while current_dir.parent != current_dir:
-                if (current_dir / "pyproject.toml").exists():
-                    project_root = current_dir
-                    break
-                current_dir = current_dir.parent
+def _get_relative_path(record):
+    """Get relative path from src/ directory."""
+    file_path = Path(record["file"].path)
+    try:
+        # Find project root and get path relative to src/
+        current_dir = Path.cwd()
+        if (current_dir / "pyproject.toml").exists():
+            full_relative = file_path.relative_to(current_dir)
+            # Remove 'src/' prefix if it exists
+            if full_relative.parts[0] == "src":
+                return "/".join(full_relative.parts[1:])
             else:
-                project_root = Path.cwd()
-
-            # Create logs directory
-            logs_dir = project_root / "logs"
-            logs_dir.mkdir(exist_ok=True)
-
-            # Create log file with timestamp
-            timestamp = datetime.now().strftime("%Y%m%d")
-            log_file = logs_dir / f"scli_{timestamp}.log"
-
-            file_handler = logging.FileHandler(log_file, encoding="utf-8")
-            file_handler.setLevel(logging.DEBUG)  # Always DEBUG for file
-            file_handler.setFormatter(file_formatter)
-            logger.addHandler(file_handler)
-
-            logger.debug(f"Logging to file: {log_file}")
-
-        except Exception as e:
-            logger.warning(f"Could not setup file logging: {e}")
-
-    return logger
-
-
-def get_logger(name: str = None) -> logging.Logger:
-    """Get a logger instance"""
-    if name is None:
-        name = "scli"
-
-    logger = logging.getLogger(name)
-    if not logger.handlers:
-        # Setup logger if not already configured
-        setup_logger(name)
-
-    return logger
-
-
-def set_debug_mode():
-    """Enable debug mode for all loggers"""
-    logging.getLogger("scli").setLevel(logging.DEBUG)
-    for handler in logging.getLogger("scli").handlers:
-        if isinstance(handler, logging.StreamHandler):
-            handler.setLevel(logging.DEBUG)
-
-
-def log_request(
-    logger: logging.Logger,
-    method: str,
-    url: str,
-    headers: dict = None,
-    data: any = None,
-    response_status: int = None,
-    response_text: str = None,
-):
-    """Log HTTP request details for debugging"""
-    logger.debug(f"HTTP {method} Request:")
-    logger.debug(f"  URL: {url}")
-
-    if headers:
-        # Mask sensitive headers
-        safe_headers = {}
-        for key, value in headers.items():
-            if key.lower() in ["authorization", "x-santander-client-id"]:
-                safe_headers[key] = f"{value[:8]}***" if len(value) > 8 else "***"
-            else:
-                safe_headers[key] = value
-        logger.debug(f"  Headers: {safe_headers}")
-
-    if data:
-        logger.debug(f"  Data: {data}")
-
-    if response_status is not None:
-        logger.debug("HTTP Response:")
-        logger.debug(f"  Status: {response_status}")
-        if response_text:
-            # Truncate long responses
-            if len(response_text) > 500:
-                logger.debug(f"  Body: {response_text[:500]}... (truncated)")
-            else:
-                logger.debug(f"  Body: {response_text}")
-
-
-def log_config_info(logger: logging.Logger, config: dict, script_name: str):
-    """Log configuration information (masking sensitive data)"""
-    logger.info(f"Loading configuration for {script_name}")
-
-    if not config:
-        logger.warning(f"No configuration found for {script_name}")
-        return
-
-    # Create safe config for logging (mask sensitive values)
-    safe_config = {}
-    sensitive_keys = ["client_secret", "password", "token", "secret", "key"]
-
-    for key, value in config.items():
-        if any(sensitive in key.lower() for sensitive in sensitive_keys):
-            if isinstance(value, str) and len(value) > 4:
-                safe_config[key] = f"{value[:4]}***"
-            else:
-                safe_config[key] = "***"
+                return str(full_relative)
         else:
-            safe_config[key] = value
+            # Fallback to just filename if can't find project root
+            return file_path.name
+    except (ValueError, IndexError):
+        # If file is outside project, use filename
+        return file_path.name
 
-    logger.debug(f"Configuration loaded: {safe_config}")
+
+class Logger:
+    """
+    SCLI centralized logging system with enhanced formatting and file management.
+    
+    Features:
+    - Colored console output based on log levels
+    - File path and line number tracking
+    - Timestamp with human-readable format
+    - Automatic file rotation and retention
+    - Structured logging with JSON support
+    - Thread-safe operations
+    """
+    
+    def __init__(self):
+        """Initialize SCLI logger with optimized configuration."""
+        # Remove default handler to customize completely
+        loguru_instance.remove(0)
+        
+        # Configure console handler with colors and enhanced format
+        self._setup_console_handler()
+        
+        # Setup file handlers for different environments
+        self._setup_file_handlers()
+    
+    def _setup_console_handler(self):
+        """Configure colored console output with enhanced formatting."""
+        def format_with_relative_path(record):
+            relative_path = _get_relative_path(record)
+            record["extra"]["relative_path"] = relative_path
+            return (
+                "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
+                "<level>{level: <8}</level> | "
+                f"<cyan>{relative_path}:{record['line']}</cyan> | "
+                "<level>{message}</level>\n"
+            )
+        
+        loguru_instance.add(
+            sys.stderr,
+            format=format_with_relative_path,
+            level="DEBUG",
+            colorize=True,
+            backtrace=True,
+            diagnose=True,
+            enqueue=True  # Thread-safe
+        )
+    
+    def _setup_file_handlers(self):
+        """Setup file logging with rotation and retention."""
+        # Create logs directory if it doesn't exist
+        logs_dir = Path("logs")
+        logs_dir.mkdir(exist_ok=True)
+        
+        # General application logs
+        loguru_instance.add(
+            logs_dir / "scli_{time:YYYY-MM-DD}.log",
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message}",
+            level="INFO",
+            rotation="00:00",  # New file daily at midnight
+            retention="7 days",  # Keep logs for 7 days
+            compression="zip",  # Compress old logs
+            enqueue=True
+        )
+        
+        # Error-specific logs
+        loguru_instance.add(
+            logs_dir / "scli_errors_{time:YYYY-MM-DD}.log",
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message} | {extra}",
+            level="ERROR",
+            rotation="10 MB",  # New file every 10MB
+            retention="30 days",  # Keep error logs for 30 days
+            compression="zip",
+            enqueue=True,
+            backtrace=True,
+            diagnose=True
+        )
+        
+        # JSON structured logs for production analysis
+        loguru_instance.add(
+            logs_dir / "scli_structured_{time:YYYY-MM-DD}.json",
+            format="{message}",
+            level="INFO",
+            rotation="100 MB",
+            retention="14 days",
+            compression="zip",
+            serialize=True,  # JSON format
+            enqueue=True
+        )
+    
+    def get_logger(self):
+        """Get configured loguru logger instance."""
+        return loguru_instance
+    
+    def add_context(self, **context: Any):
+        """Add contextual information to logger."""
+        return loguru_instance.bind(**context)
+    
+    def catch_exceptions(self):
+        """Decorator for automatic exception logging."""
+        return loguru_instance.catch
+    
+    # Direct logging methods for class usage
+    def trace(self, message: str, detail=None):
+        """Log trace level message with optional detail dict."""
+        self._validate_and_log('trace', message, detail)
+    
+    def debug(self, message: str, detail=None):
+        """Log debug level message with optional detail dict."""
+        self._validate_and_log('debug', message, detail)
+    
+    def info(self, message: str, detail=None):
+        """Log info level message with optional detail dict."""
+        self._validate_and_log('info', message, detail)
+    
+    def success(self, message: str, detail=None):
+        """Log success level message with optional detail dict."""
+        self._validate_and_log('success', message, detail)
+    
+    def warning(self, message: str, detail=None):
+        """Log warning level message with optional detail dict."""
+        self._validate_and_log('warning', message, detail)
+    
+    def error(self, message: str, detail=None):
+        """Log error level message with optional detail dict."""
+        self._validate_and_log('error', message, detail)
+    
+    def critical(self, message: str = "Critical error occurred", detail=None):
+        """Log critical level message with automatic traceback."""
+        traceback_info = traceback_format_exc()
+        final_message = f"{message}\n{traceback_info}"
+        self._validate_and_log('critical', final_message, detail)
+    
+    def _validate_and_log(self, level: str, message: str, detail):
+        """
+        Validate logging parameters and perform actual logging.
+        
+        Args:
+            level: Log level (trace, debug, info, success, warning, error, critical)
+            message: Must be a plain string, no f-strings or b-strings allowed
+            detail: Optional dict with additional data, or None/False to ignore
+        """
+        # Validate message is a plain string
+        if not isinstance(message, str):
+            raise TypeError(f"Log message must be a plain string, got {type(message).__name__}")
+        
+        # Check for f-string or b-string patterns (basic validation)
+        if message.startswith(('f"', "f'", 'b"', "b'")):
+            raise ValueError("f-strings and b-strings not allowed in log messages. Use plain string with detail parameter.")
+        
+        # Validate detail parameter
+        if detail is not None and detail is not False:
+            if not isinstance(detail, dict):
+                raise TypeError(f"detail parameter must be dict or None/False, got {type(detail).__name__}")
+        
+        # Get the logging method
+        log_method = getattr(loguru_instance, level)
+        
+        # Log with or without detail context
+        if detail and isinstance(detail, dict):
+            # Build message with detail information
+            import json
+            detail_str = json.dumps(detail, separators=(',', ':'))
+            full_message = f"{message} | {detail_str}"
+            log_method(full_message)
+        else:
+            # Log plain message
+            log_method(message)
+    
+    def configure_for_testing(self):
+        """Configure logger for testing environment (less verbose)."""
+        loguru_instance.remove()  # Remove all handlers
+        loguru_instance.add(
+            sys.stderr,
+            format="<level>{level: <8}</level> | <cyan>{file.path}:{line}</cyan> | {message}",
+            level="WARNING",  # Only warnings and above in tests
+            colorize=True
+        )
+    
+    def configure_for_production(self):
+        """Configure logger for production environment."""
+        loguru_instance.remove()  # Remove all handlers
+        
+        # Console: Only critical errors
+        loguru_instance.add(
+            sys.stderr,
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message}",
+            level="ERROR",
+            colorize=False  # No colors in production console
+        )
+        
+        # Enhanced file logging for production
+        logs_dir = Path("/var/log/scli") if os.path.exists("/var/log") else Path("logs")
+        logs_dir.mkdir(exist_ok=True, parents=True)
+        
+        loguru_instance.add(
+            logs_dir / "scli_production.log",
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message}",
+            level="INFO",
+            rotation="50 MB",
+            retention="90 days",
+            compression="zip",
+            enqueue=True
+        )
 
 
-# Initialize default logger
-default_logger = setup_logger()
+# Pre-initialized global logger instance
+logger = Logger()
+
+
+
+# Export the logger for direct import
+__all__ = [
+    'Logger',
+    'logger'
+]
