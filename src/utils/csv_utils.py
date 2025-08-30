@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
 """
-CSV Viewer - Interactive CSV file viewer with filtering and column management
+CSV Utilities - CSV processing and Textual application functionality
 """
 
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Set
 
 import pandas as pd
-
-from menu_utils import interactive_menu, text_input
-
-# Add the src directory to path to import scli modules
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
 
 try:
     from textual import events, on
@@ -32,12 +26,9 @@ try:
         LoadingIndicator,
     )
     from textual.worker import get_current_worker
+    TEXTUAL_AVAILABLE = True
 except ImportError:
-    print("❌ Error: textual library is required for CSV viewer")
-    print("Please install it with: pip install textual pandas")
-    sys.exit(1)
-
-DESCRIPTION = "Interactive CSV viewer with filtering and column management"
+    TEXTUAL_AVAILABLE = False
 
 
 @dataclass
@@ -552,6 +543,12 @@ class CSVViewerApp(App):
 
 def select_csv_file() -> Optional[str]:
     """Interactive file browser to select CSV file"""
+    try:
+        from utils.menu_utils import interactive_menu, text_input
+    except ImportError:
+        print("❌ Error: menu utilities not available")
+        return None
+    
     current_dir = os.getcwd()
 
     while True:
@@ -689,8 +686,8 @@ def detect_separator(file_path: str, sample_size: int = 5) -> str:
     return ","  # Default to comma
 
 
-def load_csv_file(file_path: str, separator: str) -> Optional[CSVData]:
-    """Load CSV file metadata and return CSVData object"""
+def load_csv_file(file_path: str, separator: str) -> Optional[tuple]:
+    """Load CSV file metadata and return CSVData object and encoding"""
     try:
         # Try different encodings
         encodings = ["utf-8", "latin-1", "cp1252"]
@@ -734,5 +731,3 @@ def load_csv_file(file_path: str, separator: str) -> Optional[CSVData]:
     except Exception as e:
         print(f"❌ Error loading CSV file: {e}")
         return None
-
-

@@ -1,18 +1,16 @@
+#!/usr/bin/env python3
+"""
+Code Formatter Utilities - Classes and functions for Python code formatting
+"""
+
 import argparse
 import fnmatch
 import os
 import subprocess
-import sys
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
-
-from menu_utils import confirm, simple_menu
-
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
-
-DESCRIPTION = "🎨 Auto-format Python code based on specific formatting actions"
 
 try:
     import yaml
@@ -730,5 +728,3 @@ Enable/disable specific actions in the 'format:' section or via CLI flags
         )
 
     return parser.parse_args()
-
-

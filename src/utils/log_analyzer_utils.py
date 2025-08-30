@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """
-Log Analytics Script for Request Metrics Analysis
-Analyzes logs-insights-results.csv to extract request metrics by time periods
+Log Analyzer Utilities - Log analysis functionality
 """
 
-import argparse
 import csv
 import json
 from collections import Counter
@@ -216,5 +214,3 @@ class LogAnalyzer:
             json.dump(results, f, indent=2, default=str)
 
         print(f"\nResults exported to: {output_file}")
-
-

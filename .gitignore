@@ -69,3 +69,5 @@ config*.yml
 *.pdf
 
 *.log
+
+.ruff_cache

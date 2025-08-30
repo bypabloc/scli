@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+"""
+Code Quality Checker Command - Python code quality analysis
+"""
+
 import argparse
 import fnmatch
 import os
@@ -8,9 +13,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from menu_utils import confirm, simple_menu
+# Add the src directory to path to import scli modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
+from utils.base_command import InteractiveCommand
+from models.code_quality_checker_model import CodeQualityCheckerModel
+from menu_utils import confirm, simple_menu, interactive_menu, text_input
 
 DESCRIPTION = "🔍 Code quality checker for Python files using pycodestyle"
 
@@ -737,3 +745,559 @@ Examples:
     return parser.parse_args()
 
 
+class CodeQualityCheckerCommand(InteractiveCommand):
+    """Code quality checker command implementation"""
+    
+    # Set the validation model
+    event_model = CodeQualityCheckerModel
+    
+    def __init__(self):
+        super().__init__(name="code_quality_checker", description=DESCRIPTION)
+        self.validated_data = None
+        self.quality_checker = None
+    
+    def preload(self, *args, **kwargs) -> bool:
+        """
+        Preload and validate command arguments using Pydantic model.
+        """
+        try:
+            # Call parent preload first
+            if not super().preload(*args, **kwargs):
+                return False
+            
+            # Convert args to a dictionary for validation
+            data = {}
+            
+            # Parse command line arguments if provided
+            if args:
+                i = 0
+                while i < len(args):
+                    arg = args[i]
+                    if arg == '--mode' and i + 1 < len(args):
+                        data['mode'] = args[i + 1]
+                        i += 1
+                    elif arg.startswith('--mode='):
+                        data['mode'] = arg.split('=', 1)[1]
+                    elif arg == '--verbose':
+                        data['verbose'] = True
+                    elif arg == '--no-verbose':
+                        data['verbose'] = False
+                    elif arg == '--config' and i + 1 < len(args):
+                        data['config_file'] = args[i + 1]
+                        i += 1
+                    elif arg.startswith('--config='):
+                        data['config_file'] = arg.split('=', 1)[1]
+                    elif arg == '--project-root' and i + 1 < len(args):
+                        data['project_root'] = args[i + 1]
+                        i += 1
+                    elif arg.startswith('--project-root='):
+                        data['project_root'] = arg.split('=', 1)[1]
+                    elif arg == '--directory' and i + 1 < len(args):
+                        data['project_root'] = args[i + 1]
+                        i += 1
+                    elif arg.startswith('--directory='):
+                        data['project_root'] = arg.split('=', 1)[1]
+                    elif arg == '--max-errors' and i + 1 < len(args):
+                        data['max_errors'] = int(args[i + 1])
+                        i += 1
+                    elif arg.startswith('--max-errors='):
+                        data['max_errors'] = int(arg.split('=', 1)[1])
+                    elif arg == '--respect-gitignore':
+                        data['respect_gitignore'] = True
+                    elif arg == '--no-respect-gitignore':
+                        data['respect_gitignore'] = False
+                    i += 1
+            
+            # Add any kwargs
+            data.update(kwargs)
+            
+            # Set defaults
+            if 'mode' not in data:
+                data['mode'] = 'all'
+            if 'verbose' not in data:
+                data['verbose'] = False
+            
+            # Validate using Pydantic model
+            self.validated_data = self.event_model(**data)
+            
+            self.logger.debug(f"Arguments validated successfully: {self.validated_data.to_dict()}")
+            return True
+            
+        except Exception as e:
+            self.print_error(f"Argument validation failed: {e}")
+            self.logger.error(f"Preload validation error: {e}")
+            return False
+    
+    def requirements(self, *args, **kwargs) -> bool:
+        """Check if pycodestyle is available"""
+        try:
+            # Check if pycodestyle is available
+            if not pycodestyle:
+                self.print_error("pycodestyle not installed. Install with: pip install pycodestyle")
+                return False
+            
+            self.print_success("pycodestyle is available")
+            return True
+            
+        except Exception as e:
+            self.print_error(f"Requirements check failed: {e}")
+            return False
+    
+    def validation(self, *args, **kwargs) -> bool:
+        """Validate git requirements for git-based modes"""
+        try:
+            if not self.validated_data:
+                self.print_error("No validated data available")
+                return False
+            
+            # Check git availability for git-dependent modes
+            if self.validated_data.requires_git():
+                project_root = self.validated_data.get_project_root_path()
+                
+                # Check if we're in a git repository
+                try:
+                    result = subprocess.run(
+                        ["git", "rev-parse", "--git-dir"],
+                        cwd=project_root,
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode != 0:
+                        self.print_warning(f"Mode '{self.validated_data.mode}' requires git, but not in a git repository")
+                        self.print_info("Will use 'all' mode instead")
+                        # Update mode to 'all' if git is not available
+                        self.validated_data.mode = 'all'
+                except FileNotFoundError:
+                    self.print_warning("Git not found in system. Will use 'all' mode instead")
+                    self.validated_data.mode = 'all'
+            
+            return True
+            
+        except Exception as e:
+            self.print_error(f"Validation failed: {e}")
+            return False
+    
+    def execute(self, *args, **kwargs) -> bool:
+        """Execute the code quality checker command with smart interactive configuration"""
+        try:
+            # Check for help request first
+            if args and (args[0] == '--help' or args[0] == '-h'):
+                self._show_help()
+                return True
+            
+            # Parse provided arguments first
+            provided_args = self._parse_provided_arguments(args)
+            
+            # Interactive/hybrid mode - show configuration menu for missing arguments
+            if not self._all_required_args_provided(provided_args):
+                print("\n🔧 Code Quality Checker Configuration")
+                print("=" * 50)
+            
+            # Step 1: Directory - ask only if not provided
+            if 'project_root' not in provided_args:
+                current_dir = str(Path.cwd())
+                project_dir = self._select_project_directory(current_dir)
+                if not project_dir:
+                    self.print_warning("Operation cancelled")
+                    return False
+            else:
+                project_dir = provided_args['project_root']
+                print(f"📁 Using provided directory: {project_dir}")
+            
+            # Step 2: Gitignore handling - ask only if not provided
+            if 'respect_gitignore' not in provided_args:
+                respect_gitignore = self._select_gitignore_option()
+            else:
+                respect_gitignore = provided_args['respect_gitignore']
+                print(f"📋 Using provided gitignore setting: {'Respect' if respect_gitignore else 'Ignore'} .gitignore")
+            
+            # Step 3: Config file - ask only if not provided
+            if 'config_file' not in provided_args:
+                config_file = self._select_config_file()
+            else:
+                config_file = provided_args['config_file']
+                print(f"📝 Using provided config: {config_file or 'Default configuration'}")
+            
+            # Step 4: Analysis mode - ask only if not provided
+            if 'mode' not in provided_args:
+                mode = self._select_analysis_mode()
+            else:
+                mode = provided_args['mode']
+                print(f"🔍 Using provided mode: {mode}")
+            
+            # Step 5: Verbose option - ask only if not provided
+            if 'verbose' not in provided_args:
+                verbose = self._select_verbose_option()
+            else:
+                verbose = provided_args['verbose']
+                print(f"📊 Using provided verbose setting: {'Yes' if verbose else 'No'}")
+            
+            # Create temporary validated data with selected options
+            temp_data = {
+                'mode': mode,
+                'verbose': verbose,
+                'project_root': project_dir,
+                'config_file': config_file,
+                'respect_gitignore': respect_gitignore
+            }
+            
+            # Validate the data
+            self.validated_data = self.event_model(**temp_data)
+            
+            # Show command shortcut BEFORE execution
+            print("\n" + "="*60)
+            print("🚀 COMMAND SHORTCUT FOR NEXT TIME")
+            print("="*60)
+            self._build_and_show_shortcut(project_dir, mode, verbose, config_file, respect_gitignore)
+            
+            print("\n🚀 Starting code quality analysis...")
+            print("-" * 50)
+            print(f"📁 Directory: {project_dir}")
+            print(f"📝 Config: {config_file or 'Default configuration'}")
+            print(f"🔍 Mode: {mode}")
+            print(f"📊 Verbose: {'Yes' if verbose else 'No'}")
+            print(f"📋 Respect .gitignore: {'Yes' if respect_gitignore else 'No'}")
+            print("-" * 50)
+            
+            # Execute analysis
+            result = self._run_analysis()
+            
+            return result
+            
+        except Exception as e:
+            self.print_error(f"Failed to execute code quality checker: {e}")
+            return False
+    
+    def _parse_provided_arguments(self, args: tuple) -> Dict[str, Any]:
+        """Parse command line arguments and return provided values"""
+        provided = {}
+        
+        if not args:
+            return provided
+        
+        i = 0
+        while i < len(args):
+            arg = args[i]
+            
+            # Parse all possible arguments
+            if arg == '--mode' and i + 1 < len(args):
+                provided['mode'] = args[i + 1]
+                i += 1
+            elif arg.startswith('--mode='):
+                provided['mode'] = arg.split('=', 1)[1]
+            elif arg == '--verbose':
+                provided['verbose'] = True
+            elif arg == '--no-verbose':
+                provided['verbose'] = False
+            elif arg == '--config' and i + 1 < len(args):
+                provided['config_file'] = args[i + 1]
+                i += 1
+            elif arg.startswith('--config='):
+                provided['config_file'] = arg.split('=', 1)[1]
+            elif arg == '--project-root' and i + 1 < len(args):
+                provided['project_root'] = args[i + 1]
+                i += 1
+            elif arg.startswith('--project-root='):
+                provided['project_root'] = arg.split('=', 1)[1]
+            elif arg == '--directory' and i + 1 < len(args):
+                provided['project_root'] = args[i + 1]
+                i += 1
+            elif arg.startswith('--directory='):
+                provided['project_root'] = arg.split('=', 1)[1]
+            elif arg == '--respect-gitignore':
+                provided['respect_gitignore'] = True
+            elif arg == '--no-respect-gitignore':
+                provided['respect_gitignore'] = False
+            elif arg == '--max-errors' and i + 1 < len(args):
+                provided['max_errors'] = int(args[i + 1])
+                i += 1
+            elif arg.startswith('--max-errors='):
+                provided['max_errors'] = int(arg.split('=', 1)[1])
+            
+            i += 1
+        
+        return provided
+    
+    def _all_required_args_provided(self, provided_args: Dict[str, Any]) -> bool:
+        """Check if all required arguments are provided (for fully non-interactive mode)"""
+        required_keys = ['project_root', 'respect_gitignore', 'config_file', 'mode', 'verbose']
+        return all(key in provided_args for key in required_keys)
+    
+    def _build_and_show_shortcut(self, project_dir: str, mode: str, verbose: bool, 
+                               config_file: Optional[str], respect_gitignore: bool):
+        """Build and show command shortcut"""
+        # Build command
+        cmd_parts = ["uv run python scli code_quality_checker"]
+        cmd_parts.append(f"--directory=\"{project_dir}\"")
+        cmd_parts.append(f"--mode={mode}")
+        
+        if verbose:
+            cmd_parts.append("--verbose")
+        else:
+            cmd_parts.append("--no-verbose")
+        
+        if config_file:
+            cmd_parts.append(f"--config=\"{config_file}\"")
+        else:
+            cmd_parts.append("--config=")  # Empty config means use defaults
+        
+        if respect_gitignore:
+            cmd_parts.append("--respect-gitignore")
+        else:
+            cmd_parts.append("--no-respect-gitignore")
+        
+        command = " ".join(cmd_parts)
+        print(f"📋 {command}")
+        print()
+        print("💡 Copy this command to run the same analysis directly next time!")
+        print("=" * 60)
+    
+    def _show_help(self):
+        """Show command-specific help"""
+        print(f"\n{DESCRIPTION}")
+        print("=" * 60)
+        print("📋 USAGE:")
+        print("  uv run python scli code_quality_checker [OPTIONS]")
+        print()
+        print("🔧 OPTIONS:")
+        print("  -h, --help                    Show this help message")
+        print("  --directory=PATH              Project directory to analyze (default: current)")
+        print("  --project-root=PATH           Same as --directory")
+        print("  --mode=MODE                   Analysis mode: all, staged, modified, tracked (default: all)")
+        print("  --verbose                     Show detailed error output")
+        print("  --no-verbose                  Show summary only (default)")
+        print("  --config=FILE                 Configuration file path (default: .scli-quality.yml)")
+        print("  --respect-gitignore           Respect .gitignore files (default)")
+        print("  --no-respect-gitignore        Ignore .gitignore files")
+        print("  --max-errors=N                Maximum allowed errors before failing (default: 0)")
+        print()
+        print("📁 ANALYSIS MODES:")
+        print("  all       - Analyze all Python files in project")
+        print("  staged    - Analyze only staged files (git)")
+        print("  modified  - Analyze only modified files (git)")
+        print("  tracked   - Analyze only tracked files (git)")
+        print()
+        print("💡 EXAMPLES:")
+        print("  # Interactive mode")
+        print("  uv run python scli code_quality_checker")
+        print()
+        print("  # Direct execution with specific directory")
+        print("  uv run python scli code_quality_checker --directory=/path/to/project")
+        print()
+        print("  # Full configuration")
+        print("  uv run python scli code_quality_checker --directory=. --mode=all --verbose --max-errors=100")
+        print()
+        print("  # Quick check with higher error tolerance")
+        print("  uv run python scli code_quality_checker --mode=staged --max-errors=50")
+        print()
+        print("🔧 CONFIGURATION:")
+        print("  Create .scli-quality.yml in your project root for custom settings.")
+        print("  Example configuration includes PEP 8 compliance, Black compatibility,")
+        print("  and modern Python best practices.")
+        print("=" * 60)
+    
+    def _execute_direct(self, *args, **kwargs) -> bool:
+        """Execute command directly with command line arguments (non-interactive)"""
+        if not self.validated_data:
+            self.print_error("No validated data available")
+            return False
+        
+        return self._run_analysis()
+    
+    def _run_analysis(self) -> bool:
+        """Run the actual code quality analysis"""
+        # Initialize quality checker
+        project_root = self.validated_data.get_project_root_path()
+        config_path = self.validated_data.get_config_path()
+        
+        # Load configuration
+        config = CodeQualityConfig(config_path)
+        self.quality_checker = CodeQualityChecker(project_root, config)
+        
+        self.print_info(f"Checking code quality in: {project_root}")
+        self.print_info(f"Mode: {self.validated_data.mode}")
+        if config_path:
+            self.print_info(f"Using config: {config_path}")
+        
+        # Get files to check
+        files = self.quality_checker.get_files_to_check(self.validated_data.mode)
+        
+        if not files:
+            self.print_warning("No Python files found to check")
+            return True
+        
+        self.print_info(f"Found {len(files)} Python files to check")
+        
+        # Run quality check
+        total_errors, error_summary = self.quality_checker.check_code_quality(
+            files, self.validated_data.verbose
+        )
+        
+        # Print summary
+        self.quality_checker.print_summary(total_errors, error_summary, len(files))
+        
+        # Check against limits
+        max_errors = self.validated_data.max_errors or config.get("limits.max_total_errors", 0)
+        
+        # Store results
+        self.set_result("mode", self.validated_data.mode)
+        self.set_result("files_checked", len(files))
+        self.set_result("total_errors", total_errors)
+        self.set_result("max_errors", max_errors)
+        self.set_result("error_summary", error_summary)
+        self.set_result("validated_args", self.validated_data.to_dict())
+        
+        # Determine success based on error limits
+        if total_errors > max_errors:
+            self.print_error(f"Code quality check failed: {total_errors} errors exceed limit of {max_errors}")
+            return False
+        else:
+            if total_errors == 0:
+                self.print_success("Code quality check passed: No errors found")
+            else:
+                self.print_success(f"Code quality check passed: {total_errors} errors within limit of {max_errors}")
+            return True
+    
+    def _select_project_directory(self, current_dir: str) -> Optional[str]:
+        """Allow user to select project directory"""
+        choices = [
+            {"name": f"📁 Current directory: {current_dir}", "value": current_dir},
+            {"name": "📂 Select different directory", "value": "custom"},
+            {"name": "❌ Cancel", "value": "cancel"}
+        ]
+        
+        selected = interactive_menu("Select project directory to analyze:", choices)
+        if not selected or selected["value"] == "cancel":
+            return None
+        
+        if selected["value"] == "custom":
+            custom_dir = text_input("Enter directory path:", current_dir)
+            if custom_dir and Path(custom_dir).exists():
+                return str(Path(custom_dir).absolute())
+            else:
+                self.print_error(f"Directory does not exist: {custom_dir}")
+                return None
+        
+        return selected["value"]
+    
+    def _select_gitignore_option(self) -> bool:
+        """Select whether to respect .gitignore files"""
+        choices = [
+            {"name": "✅ Respect .gitignore (recommended)", "value": True},
+            {"name": "📋 Analyze all files (ignore .gitignore)", "value": False}
+        ]
+        
+        selected = interactive_menu("How should .gitignore files be handled?", choices)
+        return selected["value"] if selected else True
+    
+    def _select_config_file(self) -> Optional[str]:
+        """Select configuration file"""
+        default_config = ".scli-quality.yml"
+        current_dir = Path.cwd()
+        default_path = current_dir / default_config
+        
+        choices = []
+        
+        # Check if default config exists
+        if default_path.exists():
+            choices.append({
+                "name": f"📝 Use existing {default_config} (found)",
+                "value": str(default_path)
+            })
+        else:
+            choices.append({
+                "name": f"📝 Use default {default_config} (will create if needed)",
+                "value": str(default_path)
+            })
+        
+        choices.extend([
+            {"name": "📂 Select different config file", "value": "custom"},
+            {"name": "⚙️ Use built-in defaults (no config file)", "value": None}
+        ])
+        
+        selected = interactive_menu("Select configuration file:", choices)
+        if not selected:
+            return None
+        
+        if selected["value"] == "custom":
+            custom_config = text_input("Enter config file path:", default_config)
+            if custom_config:
+                return str(Path(custom_config).absolute())
+            return None
+        
+        return selected["value"]
+    
+    def _select_analysis_mode(self) -> str:
+        """Select analysis mode"""
+        choices = [
+            {"name": "📁 All files in project", "value": "all"},
+            {"name": "📋 Only staged files (git)", "value": "staged"},
+            {"name": "📝 Only modified files (git)", "value": "modified"},
+            {"name": "🔍 Only tracked files (git)", "value": "tracked"}
+        ]
+        
+        selected = interactive_menu("Select analysis mode:", choices)
+        return selected["value"] if selected else "all"
+    
+    def _select_verbose_option(self) -> bool:
+        """Select verbose output option"""
+        choices = [
+            {"name": "📊 Verbose output (show detailed errors)", "value": True},
+            {"name": "📋 Summary only (clean output)", "value": False}
+        ]
+        
+        selected = interactive_menu("Select output detail level:", choices)
+        return selected["value"] if selected else False
+    
+    def _show_command_shortcut(self, project_dir: str, mode: str, verbose: bool, 
+                              config_file: Optional[str], respect_gitignore: bool):
+        """Show command shortcut for repeating the same analysis"""
+        print(f"\n{'='*60}")
+        print("🚀 COMMAND SHORTCUT")
+        print(f"{'='*60}")
+        print("To repeat this exact analysis, use:")
+        print()
+        
+        # Build command
+        cmd_parts = ["uv run python scli code_quality_checker"]
+        cmd_parts.append(f"--mode={mode}")
+        cmd_parts.append(f"--project-root=\"{project_dir}\"")
+        
+        if verbose:
+            cmd_parts.append("--verbose")
+        
+        if config_file:
+            cmd_parts.append(f"--config=\"{config_file}\"")
+        
+        if respect_gitignore:
+            cmd_parts.append("--respect-gitignore")
+        
+        command = " ".join(cmd_parts)
+        print(f"📋 {command}")
+        print()
+        print("💡 Tip: Copy and paste this command to run the same analysis again!")
+        print(f"{'='*60}")
+        
+        # Ask if user wants to save this command
+        if confirm("Save this command to a script file?"):
+            script_name = text_input("Enter script filename:", "check_quality.sh")
+            if script_name:
+                try:
+                    with open(script_name, 'w') as f:
+                        f.write("#!/bin/bash\n")
+                        f.write("# Generated by SCLI Code Quality Checker\n")
+                        f.write(f"# Created: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                        f.write(f"{command}\n")
+                    
+                    # Make it executable
+                    os.chmod(script_name, 0o755)
+                    self.print_success(f"Command saved to: {script_name}")
+                    self.print_info(f"Make it executable: chmod +x {script_name}")
+                except Exception as e:
+                    self.print_error(f"Failed to save script: {e}")
+
+
+
+
+# Create command instance for dynamic import
+command_instance = CodeQualityCheckerCommand()

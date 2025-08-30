@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """
-PDF Converter - Convert PDF files to different formats (TXT, Images)
+PDF Utilities - PDF processing and conversion functionality
 """
 
 import os
-import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from menu_utils import confirm, interactive_menu, text_input
-from output_manager import OutputManager
-
-# Add the src directory to path to import scli modules
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
-
-DESCRIPTION = "PDF Converter - Convert PDF files to TXT or image formats"
+try:
+    from utils.menu_utils import interactive_menu, text_input
+    from output_manager import OutputManager
+except ImportError:
+    # Fallback for standalone usage
+    pass
 
 
 def get_pdf_libraries_status() -> Dict[str, bool]:
@@ -531,5 +529,3 @@ def convert_pdf_file():
             print(f"📊 Total size: {get_file_size_str(total_size)}")
         else:
             print("❌ Image conversion failed")
-
-
