@@ -448,9 +448,9 @@ def show_spinner(
         yield spinner
         spinner.stop(success_text)
         logger.success("Operation completed successfully")
-    except Exception as e:
+    except Exception:
         spinner.stop(error_text)
-        logger.error("Operation failed", detail={"error": str(e)})
+        logger.critical("Operation failed")
         raise
 
 

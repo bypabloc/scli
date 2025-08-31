@@ -106,10 +106,8 @@ def select_command_interactively() -> Optional[str]:
     except KeyboardInterrupt:
         logger.info("Selección interrumpida por usuario (Ctrl+C)")
         return None
-    except Exception as e:
-        logger.error("Error durante selección interactiva", detail={
-            "error": str(e)
-        })
+    except Exception:
+        logger.critical("Error durante selección interactiva")
         return None
 
 
@@ -204,10 +202,8 @@ def _select_with_survey(commands: List[str]) -> Optional[str]:
     except KeyboardInterrupt:
         logger.info("Selección interrumpida por usuario (Ctrl+C)")
         return None
-    except Exception as e:
-        logger.error("Error en selector Survey, usando fallback", detail={
-            "error": str(e)
-        })
+    except Exception:
+        logger.critical("Error en selector Survey, usando fallback")
         # Fallback a Rich o modo básico
         if RICH_AVAILABLE:
             return _select_with_rich(commands)

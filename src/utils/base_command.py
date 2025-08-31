@@ -4,7 +4,10 @@ from typing import Optional
 from abc import ABC
 from abc import abstractmethod
 
+from pydantic import BaseModel
+
 from src.utils.logger import logger
+from src.utils.pydantic_validator import validate_with_model
 
 
 class BaseCommand(ABC):
@@ -12,8 +15,8 @@ class BaseCommand(ABC):
     Clase base abstracta para todos los comandos de SCLI.
     
     Define la interfaz estándar que deben implementar todos los comandos
-    del sistema, incluyendo el ciclo de vida validate -> preload -> execute
-    y el manejo de argumentos y estados internos.
+    del sistema, incluyendo el ciclo de vida validate -> preload -> execute,
+    el manejo de argumentos con validación Pydantic y estados internos.
     
     Attributes
     ----------
@@ -27,69 +30,94 @@ class BaseCommand(ABC):
         Descripción del comando para mostrar en la interfaz CLI (OBLIGATORIO)
     order : int
         Número de orden para clasificar y filtrar comandos (OBLIGATORIO)
+    args_model : type[BaseModel]
+        Modelo Pydantic para validación de argumentos (OBLIGATORIO)
+    validated_args : Dict[str, Any]
+        Argumentos validados y procesados por el modelo Pydantic
         
     Examples
     --------
+    >>> from pydantic import BaseModel, Field
+    >>> class MyCommandArgs(BaseModel):
+    ...     name: str = Field(min_length=1, description="Nombre del usuario")
+    ...     count: int = Field(ge=1, le=100, description="Número de iteraciones")
+    >>> 
     >>> class MyCommand(BaseCommand):
-    ...     description = "Comando de ejemplo"
+    ...     description = "Comando de ejemplo con validación Pydantic"
     ...     order = 1
+    ...     args_model = MyCommandArgs
+    ...     
     ...     def validate(self) -> bool:
+    ...         self.is_validated = True
     ...         return True
     ...     def preload(self) -> bool:
+    ...         self.is_preloaded = True
     ...         return True
     ...     def execute(self) -> int:
+    ...         print(f"Hola {self.validated_args['name']}")
     ...         return 0
-    >>> cmd = MyCommand()
-    >>> cmd.is_validated
-    False
+    >>> 
+    >>> cmd = MyCommand({"name": "Usuario", "count": 5})
     >>> cmd.description
-    'Comando de ejemplo'
+    'Comando de ejemplo con validación Pydantic'
     >>> cmd.order
     1
+    >>> cmd.validated_args['name']
+    'Usuario'
     
     :Authors:
         - Pablo Contreras
         
     :Created:
         - 2025-08-31
+        
+    :Updated:
+        - 2025-08-31 (Agregada validación obligatoria con modelos Pydantic)
     """
     
     def __init__(self, args: Optional[Dict[str, Any]] = None):
         """
-        Inicializa la clase base del comando.
+        Inicializa la clase base del comando con validación Pydantic.
         
-        Establece el estado inicial del comando con argumentos vacíos
-        y estados de validación y precarga en False. Valida que el
-        atributo description esté definido en la clase hija.
+        Establece el estado inicial del comando, valida atributos requeridos
+        y procesa argumentos usando el modelo Pydantic definido en la clase hija.
         
         Parameters
         ----------
         args : Dict[str, Any], optional
-            Argumentos del comando (por defecto None, se convierte en dict vacío)
+            Argumentos del comando a validar con el modelo Pydantic
             
         Raises
         ------
         AttributeError
-            Si la clase no define el atributo description
+            Si la clase no define los atributos requeridos (description, order, args_model)
+        ValueError
+            Si los argumentos no pasan la validación Pydantic o el order es inválido
             
         Examples
         --------
+        >>> from pydantic import BaseModel, Field
+        >>> class TestArgs(BaseModel):
+        ...     name: str = Field(min_length=1)
         >>> class TestCommand(BaseCommand):
         ...     description = "Comando de prueba"
+        ...     order = 1
+        ...     args_model = TestArgs
         ...     def validate(self): return True
         ...     def preload(self): return True
         ...     def execute(self): return 0
-        >>> cmd = TestCommand()
-        >>> cmd.args
-        {}
-        >>> cmd.description
-        'Comando de prueba'
+        >>> cmd = TestCommand({"name": "Usuario"})
+        >>> cmd.validated_args['name']
+        'Usuario'
         
         :Authors:
             - Pablo Contreras
             
         :Created:
             - 2025-08-31
+            
+        :Updated:
+            - 2025-08-31 (Agregada validación con modelo Pydantic)
         """
         # Validar que la clase hija defina description
         if not hasattr(self, 'description') or not isinstance(self.description, str) or not self.description.strip():
@@ -111,15 +139,66 @@ class BaseCommand(ABC):
                 f"recibido: {self.order}"
             )
         
+        # Validar que la clase hija defina args_model
+        if not hasattr(self, 'args_model'):
+            raise AttributeError(
+                f"La clase {self.__class__.__name__} debe definir un atributo 'args_model' "
+                f"que sea una clase Pydantic BaseModel para validar argumentos."
+            )
+        
+        # Validar que args_model sea subclase de BaseModel
+        if not (isinstance(self.args_model, type) and issubclass(self.args_model, BaseModel)):
+            raise AttributeError(
+                f"El atributo 'args_model' en {self.__class__.__name__} debe ser una subclase de "
+                f"pydantic.BaseModel, recibido: {type(self.args_model)}"
+            )
+        
+        # Inicializar argumentos y estados
         self.args = args or {}
         self.is_validated = False
         self.is_preloaded = False
+        self.validated_args = {}
         
-        logger.debug("Inicializando comando base", detail={
+        # Validar argumentos con modelo Pydantic
+        validation_result = validate_with_model(
+            data=self.args, 
+            model_class=self.args_model,
+            command_name=self.__class__.__name__
+        )
+        
+        if not validation_result['is_valid']:
+            error_summary = validation_result['error_summary']
+            detailed_errors = validation_result['errors']
+            
+            logger.error("Fallo en validación de argumentos", detail={
+                "command_class": self.__class__.__name__,
+                "error_summary": error_summary,
+                "detailed_errors": detailed_errors,
+                "provided_args": self.args
+            })
+            
+            # Crear mensaje de error detallado
+            error_lines = [f"Errores de validación en {self.__class__.__name__}:"]
+            for field, messages in detailed_errors.items():
+                if isinstance(messages, list):
+                    for msg in messages:
+                        error_lines.append(f"  - {msg}")
+                else:
+                    error_lines.append(f"  - {field}: {messages}")
+            
+            raise ValueError("\n".join(error_lines))
+        
+        # Guardar argumentos validados
+        self.validated_args = validation_result['validated_data']
+        
+        logger.debug("Comando base inicializado exitosamente", detail={
             "command_class": self.__class__.__name__,
             "description": self.description,
-            "args_count": len(self.args),
-            "args_keys": list(self.args.keys())
+            "order": self.order,
+            "args_model": self.args_model.__name__,
+            "raw_args_count": len(self.args),
+            "validated_args_count": len(self.validated_args),
+            "validated_args_keys": list(self.validated_args.keys())
         })
     
     @abstractmethod
@@ -407,10 +486,9 @@ class BaseCommand(ABC):
                 "exit_code": result
             })
             return result
-        except Exception as e:
-            logger.error("Error durante la ejecución del comando", detail={
-                "command_class": self.__class__.__name__,
-                "error": str(e)
+        except Exception:
+            logger.critical("Error durante la ejecución del comando", detail={
+                "command_class": self.__class__.__name__
             })
             return 3
 

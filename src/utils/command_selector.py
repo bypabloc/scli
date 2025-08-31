@@ -72,9 +72,8 @@ def get_available_commands() -> List[str]:
             "commands": available_commands
         })
         
-    except Exception as e:
-        logger.error("Error al escanear directorio de comandos", detail={
-            "error": str(e),
+    except Exception:
+        logger.critical("Error al escanear directorio de comandos", detail={
             "commands_dir": str(commands_dir)
         })
         return []
@@ -142,12 +141,11 @@ def _is_valid_command_file(file_path: str, command_name: str) -> bool:
                     "class_name": command_class.__name__
                 })
                 return False
-        except Exception as e:
-            logger.debug("Error al crear instancia de comando", detail={
+        except Exception:
+            logger.critical("Error al crear instancia de comando", detail={
                 "file": file_path,
                 "command_name": command_name,
-                "class_name": command_class.__name__,
-                "error": str(e)
+                "class_name": command_class.__name__
             })
             return False
             
@@ -159,10 +157,9 @@ def _is_valid_command_file(file_path: str, command_name: str) -> bool:
         })
         return True
             
-    except Exception as e:
-        logger.debug("Error al validar archivo de comando", detail={
-            "file": file_path,
-            "error": str(e)
+    except Exception:
+        logger.critical("Error al validar archivo de comando", detail={
+            "file": file_path
         })
         return False
 
@@ -386,11 +383,10 @@ def get_command_order(command_name: str) -> int:
                 instance = command_class()
                 if hasattr(instance, 'order') and isinstance(instance.order, int):
                     return instance.order
-            except Exception as e:
-                logger.debug("Error al crear instancia para obtener order", detail={
+            except Exception:
+                logger.critical("Error al crear instancia para obtener order", detail={
                     "command_name": command_name,
-                    "class_name": command_class.__name__,
-                    "error": str(e)
+                    "class_name": command_class.__name__
                 })
         
         # Valor por defecto alto para comandos sin order o con errores
@@ -433,11 +429,10 @@ def get_command_description(command_name: str) -> str:
                 instance = command_class()
                 if hasattr(instance, 'description') and instance.description.strip():
                     return instance.description.strip()
-            except Exception as e:
-                logger.debug("Error al crear instancia para obtener descripción", detail={
+            except Exception:
+                logger.critical("Error al crear instancia para obtener descripción", detail={
                     "command_name": command_name,
-                    "class_name": command_class.__name__,
-                    "error": str(e)
+                    "class_name": command_class.__name__
                 })
         
         return "Descripción no disponible"

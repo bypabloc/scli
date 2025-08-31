@@ -3,9 +3,47 @@ from typing import Any
 from typing import Optional
 from time import sleep as time_sleep
 
+from pydantic import BaseModel
+from pydantic import Field
+
 from src.utils.logger import logger
 from src.utils.spinner import create_spinner
 from src.utils.base_command import BaseCommand
+
+
+class TestSpinnerArgs(BaseModel):
+    """
+    Modelo de validación para los argumentos del comando TestSpinner.
+    
+    Attributes
+    ----------
+    duration : int
+        Duración en segundos para la demostración del spinner.
+        Debe estar entre 1 y 60 segundos para evitar ejecuciones muy largas.
+        
+    Examples
+    --------
+    >>> args = TestSpinnerArgs()
+    >>> args.duration
+    8
+    
+    >>> args = TestSpinnerArgs(duration=5)
+    >>> args.duration
+    5
+    
+    :Authors:
+        - Pablo Contreras
+        
+    :Created:
+        - 2025-08-31
+    """
+    duration: int = Field(
+        default=8,
+        description="Duración en segundos para la demostración del spinner",
+        ge=1,
+        le=60,
+        examples=[3, 5, 8, 10]
+    )
 
 
 class TestSpinner(BaseCommand):
@@ -19,15 +57,16 @@ class TestSpinner(BaseCommand):
     
     description = "Comando para demostrar la funcionalidad del spinner dinámico de SCLI."
     order = 2
+    args_model = TestSpinnerArgs
     
     def __init__(self, args: Optional[Dict[str, Any]] = None):
         """
-        Inicializa el comando TestSpinner.
+        Inicializa el comando TestSpinner con validación Pydantic.
         
         Parameters
         ----------
         args : Dict[str, Any], optional
-            Argumentos del comando (conversión de tipos en preload)
+            Argumentos del comando (validados automáticamente con TestSpinnerArgs)
             
         Examples
         --------
@@ -35,26 +74,29 @@ class TestSpinner(BaseCommand):
         >>> isinstance(cmd, TestSpinner)
         True
         
-        >>> cmd = TestSpinner({"duration": "5"})
-        >>> isinstance(cmd, TestSpinner)
-        True
+        >>> cmd = TestSpinner({"duration": 5})
+        >>> cmd.validated_args["duration"]
+        5
         
         :Authors:
             - Pablo Contreras
             
         :Created:
             - 2025-08-31
+            
+        :Updated:
+            - 2025-08-31 (Simplificado con validación Pydantic automática)
         """
         super().__init__(args)
         self.spinner = None
-        self.total_duration = None  # Se definirá en preload()
+        # total_duration se obtiene directamente de validated_args
         
     def validate(self) -> bool:
         """
-        Valida argumentos básicos y capacidades del sistema.
+        Valida que el comando pueda ejecutarse correctamente.
         
-        Verifica que la configuración del spinner esté disponible y que
-        los argumentos proporcionados sean válidos antes de la conversión.
+        Con Pydantic, la validación de argumentos ya se hizo automáticamente
+        en __init__, por lo que solo necesitamos verificar capacidades del sistema.
         
         Returns
         -------
@@ -75,45 +117,23 @@ class TestSpinner(BaseCommand):
             
         :Created:
             - 2025-08-31
+            
+        :Updated:
+            - 2025-08-31 (Simplificado - Pydantic maneja validación de argumentos)
         """
         logger.debug("Validando comando TestSpinner", detail={
-            "args_count": len(self.args),
-            "args_keys": list(self.args.keys())
+            "validated_args": self.validated_args
         })
         
-        # Validar argumentos sin convertir tipos (eso se hace en preload)
-        if "duration" in self.args:
-            duration_raw = self.args["duration"]
-            # Validar que pueda convertirse a entero
-            try:
-                duration_test = int(duration_raw)
-                if duration_test <= 0:
-                    logger.error("La duración debe ser mayor a 0", detail={
-                        "provided_duration": duration_raw
-                    })
-                    return False
-                if duration_test > 60:
-                    logger.warning("Duración muy larga para test de spinner", detail={
-                        "duration": duration_raw,
-                        "recommended_max": 60
-                    })
-            except (ValueError, TypeError):
-                logger.error("El valor de duration debe ser un número entero", detail={
-                    "provided_value": duration_raw,
-                    "provided_type": type(duration_raw).__name__
-                })
-                return False
-            
-        # Verificar que podemos crear un spinner
+        # Los argumentos ya fueron validados por Pydantic automáticamente
+        # Solo verificamos que podemos crear un spinner
         try:
             test_spinner = create_spinner("Test validation")
             if test_spinner is None:
                 logger.error("No se pudo crear instancia de spinner para validación")
                 return False
-        except Exception as e:
-            logger.error("Error al validar spinner", detail={
-                "error": str(e)
-            })
+        except Exception:
+            logger.critical("Error al validar spinner")
             return False
             
         self.is_validated = True
@@ -123,10 +143,10 @@ class TestSpinner(BaseCommand):
         
     def preload(self) -> bool:
         """
-        Precarga recursos, convierte tipos de argumentos y prepara el spinner.
+        Precarga recursos y prepara el spinner para la demostración.
         
-        Define y convierte los tipos esperados de argumentos:
-        - duration: int (segundos de duración, default: 8)
+        Los argumentos ya fueron validados por Pydantic automáticamente,
+        por lo que solo necesitamos preparar el spinner y recursos.
         
         Returns
         -------
@@ -135,20 +155,20 @@ class TestSpinner(BaseCommand):
             
         Examples
         --------
-        >>> cmd = TestSpinner()
+        >>> cmd = TestSpinner({"duration": 5})
         >>> cmd.validate()
         True
         >>> cmd.preload()
         True
-        
-        >>> cmd.total_duration
-        8
         
         :Authors:
             - Pablo Contreras
             
         :Created:
             - 2025-08-31
+            
+        :Updated:
+            - 2025-08-31 (Simplificado con validación Pydantic automática)
         """
         if not self.is_validated:
             logger.error("No se puede precargar: el comando no ha sido validado")
@@ -156,40 +176,23 @@ class TestSpinner(BaseCommand):
             
         logger.debug("Precargando recursos para TestSpinner", detail={
             "validation_status": self.is_validated,
-            "raw_args": self.args
+            "validated_args": self.validated_args,
+            "duration": self.validated_args["duration"]
         })
         
-        # Definir y convertir tipos de argumentos esperados
-        try:
-            # duration: int (segundos de duración)
-            duration_raw = self.args.get("duration", 8)
-            if duration_raw == 8:  # Valor por defecto
-                self.total_duration = 8
-            else:
-                self.total_duration = self._convert_to_int("duration", duration_raw, default=8)
-                
-            logger.debug("Argumentos procesados", detail={
-                "total_duration": self.total_duration,
-                "duration_type": type(self.total_duration).__name__
-            })
-            
-        except Exception as e:
-            logger.error("Error al convertir argumentos", detail={
-                "error": str(e),
-                "args": self.args
-            })
-            return False
-        
-        # Crear spinner con configuración de app_config
+        # Crear spinner - los argumentos ya están validados y convertidos por Pydantic
         try:
             self.spinner = create_spinner("Initializing test")
             if self.spinner is None:
                 logger.error("No se pudo crear el spinner durante la precarga")
                 return False
-        except Exception as e:
-            logger.error("Error al crear spinner en precarga", detail={
-                "error": str(e)
+                
+            logger.debug("Spinner creado exitosamente", detail={
+                "duration_configured": self.validated_args["duration"]
             })
+            
+        except Exception:
+            logger.critical("Error al crear spinner en precarga")
             return False
             
         self.is_preloaded = True
@@ -197,56 +200,6 @@ class TestSpinner(BaseCommand):
         
         return True
     
-    def _convert_to_int(self, param_name: str, value: Any, default: int) -> int:
-        """
-        Convierte un valor a entero con validación y logging.
-        
-        Parameters
-        ----------
-        param_name : str
-            Nombre del parámetro para logging
-        value : Any
-            Valor a convertir
-        default : int
-            Valor por defecto si la conversión falla
-            
-        Returns
-        -------
-        int
-            Valor convertido o default
-            
-        Examples
-        --------
-        >>> cmd = TestSpinner()
-        >>> cmd._convert_to_int("duration", "10", 8)
-        10
-        
-        >>> cmd._convert_to_int("duration", "invalid", 8)
-        8
-        
-        :Authors:
-            - Pablo Contreras
-            
-        :Created:
-            - 2025-08-31
-        """
-        try:
-            converted = int(value)
-            logger.debug(f"Conversión exitosa: {param_name}", detail={
-                "original": value,
-                "converted": converted,
-                "type": type(converted).__name__
-            })
-            return converted
-        except (ValueError, TypeError) as e:
-            logger.warning(f"Conversión fallida para {param_name}, usando default", detail={
-                "original_value": value,
-                "original_type": type(value).__name__,
-                "default_value": default,
-                "error": str(e)
-            })
-            return default
-        
     def execute(self) -> int:
         """
         Ejecuta la demostración completa del spinner.
@@ -291,8 +244,9 @@ class TestSpinner(BaseCommand):
         logger.info("Starting spinner test demonstration")
         
         try:
-            # Calcular duración por fase
-            phase_duration = self.total_duration / 4
+            # Calcular duración por fase usando argumentos validados
+            total_duration = self.validated_args["duration"]
+            phase_duration = total_duration / 4
             
             # Iniciar spinner
             self.spinner.start()
@@ -319,12 +273,10 @@ class TestSpinner(BaseCommand):
             # Completar spinner
             self.spinner.stop()
             
-        except Exception as e:
+        except Exception:
             if self.spinner:
                 self.spinner.stop("❌ Spinner test failed")
-            logger.error("Error durante la ejecución del test de spinner", detail={
-                "error": str(e)
-            })
+            logger.critical("Error durante la ejecución del test de spinner")
             return 1
             
         logger.success("Spinner test demonstration completed")

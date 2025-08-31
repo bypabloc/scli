@@ -155,10 +155,9 @@ def _handle_dynamic_command(parsed_args: Dict[str, Any]) -> int:
             "exit_code": exit_code
         })
         return exit_code
-    except Exception as e:
-        logger.error("Error during dynamic command execution", detail={
+    except Exception:
+        logger.critical("Error during dynamic command execution", detail={
             "command_name": command_name,
-            "error": str(e),
             "args": command_args
         })
         return 1
@@ -200,10 +199,8 @@ def _handle_interactive_selection() -> int:
     except KeyboardInterrupt:
         logger.info("Selección interrumpida por usuario (Ctrl+C)")
         return 0
-    except Exception as e:
-        logger.error("Error durante selección interactiva", detail={
-            "error": str(e)
-        })
+    except Exception:
+        logger.critical("Error durante selección interactiva")
         return 1
 
 

@@ -2,8 +2,46 @@ from typing import Dict
 from typing import Any
 from typing import Optional
 
+from pydantic import BaseModel
+from pydantic import Field
+
 from src.utils.logger import logger
 from src.utils.base_command import BaseCommand
+
+
+class HelloWorldArgs(BaseModel):
+    """
+    Modelo de validación para los argumentos del comando HelloWorld.
+    
+    Attributes
+    ----------
+    name : Optional[str]
+        Nombre personalizado para el saludo. Si no se proporciona, usa saludo genérico.
+        Debe tener al menos 1 carácter si se proporciona.
+        
+    Examples
+    --------
+    >>> args = HelloWorldArgs()
+    >>> args.name is None
+    True
+    
+    >>> args = HelloWorldArgs(name="Usuario")
+    >>> args.name
+    'Usuario'
+    
+    :Authors:
+        - Pablo Contreras
+        
+    :Created:
+        - 2025-08-31
+    """
+    name: Optional[str] = Field(
+        default=None,
+        description="Nombre personalizado para el saludo",
+        min_length=1,
+        max_length=100,
+        examples=["Usuario", "Pablo", "María"]
+    )
 
 
 class HelloWorld(BaseCommand):
@@ -16,6 +54,7 @@ class HelloWorld(BaseCommand):
     
     description = "Comando simple que demuestra la estructura básica de un comando en SCLI."
     order = 1
+    args_model = HelloWorldArgs
     
     def validate(self) -> bool:
         """
@@ -90,13 +129,13 @@ class HelloWorld(BaseCommand):
             
         logger.debug("Precargando recursos para HelloWorld", detail={
             "validation_status": self.is_validated,
-            "args": self.args
+            "args": self.validated_args
         })
         
         # Precarga simple: preparar mensaje personalizado si hay nombre
-        if "name" in self.args:
+        if "name" in self.validated_args and self.validated_args["name"]:
             logger.debug("Preparando saludo personalizado", detail={
-                "target_name": self.args["name"]
+                "target_name": self.validated_args["name"]
             })
         
         self.is_preloaded = True
@@ -151,12 +190,12 @@ class HelloWorld(BaseCommand):
         logger.info("Ejecutando comando HelloWorld", detail={
             "validation_status": self.is_validated,
             "preload_status": self.is_preloaded,
-            "args_provided": len(self.args) > 0
+            "args_provided": len(self.validated_args) > 0
         })
         
         # Núcleo del comando: saludo personalizado o genérico
-        if "name" in self.args and self.args["name"]:
-            logger.success(f"¡Hola mundo, {self.args['name']}!")
+        if "name" in self.validated_args and self.validated_args["name"]:
+            logger.success(f"¡Hola mundo, {self.validated_args['name']}!")
         else:
             logger.success("¡Hola mundo!")
             

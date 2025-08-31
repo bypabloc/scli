@@ -61,10 +61,9 @@ def import_command(operation: str) -> ResultDict:
     # Convertir snake_case a PascalCase para nombre de clase
     try:
         class_name = convert_case_style(operation, 'PascalCase')
-    except Exception as e:
-        logger.error("Error al convertir nombre de operación a PascalCase", detail={
+    except Exception:
+        logger.critical("Error al convertir nombre de operación a PascalCase", detail={
             'operation': operation,
-            'error': str(e),
             'traceback': traceback_format_exc()
         })
         result = error(
@@ -90,11 +89,10 @@ def import_command(operation: str) -> ResultDict:
             'operation': operation,
             'module_name': module.__name__
         })
-    except (ImportError, ModuleNotFoundError) as e:
-        logger.error("Error al importar módulo de comando", detail={
+    except (ImportError, ModuleNotFoundError):
+        logger.critical("Error al importar módulo de comando", detail={
             'operation': operation,
             'module_path': f"src.commands.{operation}",
-            'error': str(e),
             'traceback': traceback_format_exc()
         })
         result = error(
@@ -106,10 +104,9 @@ def import_command(operation: str) -> ResultDict:
         )
         result['class'] = None
         return result
-    except Exception as e:
-        logger.error("Error inesperado al importar módulo", detail={
+    except Exception:
+        logger.critical("Error inesperado al importar módulo", detail={
             'operation': operation,
-            'error': str(e),
             'traceback': traceback_format_exc()
         })
         result = error(
@@ -130,13 +127,12 @@ def import_command(operation: str) -> ResultDict:
             'class_name': class_name,
             'class_type': str(type(command_class))
         })
-    except AttributeError as e:
-        logger.error("Clase de comando no encontrada en módulo", detail={
+    except AttributeError:
+        logger.critical("Clase de comando no encontrada en módulo", detail={
             'operation': operation,
             'class_name': class_name,
             'module_name': module.__name__,
             'available_attrs': [attr for attr in dir(module) if not attr.startswith('_')],
-            'error': str(e),
             'traceback': traceback_format_exc()
         })
         result = error(
@@ -148,11 +144,10 @@ def import_command(operation: str) -> ResultDict:
         )
         result['class'] = None
         return result
-    except Exception as e:
-        logger.error("Error inesperado al obtener clase", detail={
+    except Exception:
+        logger.critical("Error inesperado al obtener clase", detail={
             'operation': operation,
             'class_name': class_name,
-            'error': str(e),
             'traceback': traceback_format_exc()
         })
         result = error(
@@ -179,10 +174,9 @@ def import_command(operation: str) -> ResultDict:
         logger.debug("BaseCommand no disponible para validación", detail={
             'operation': operation
         })
-    except Exception as e:
-        logger.warning("Error al validar herencia de BaseCommand", detail={
-            'operation': operation,
-            'error': str(e)
+    except Exception:
+        logger.critical("Error al validar herencia de BaseCommand", detail={
+            'operation': operation
         })
     
     # Éxito - retornar datos del comando
@@ -258,12 +252,11 @@ def create_command_instance(operation: str, args: dict = None) -> ResultDict:
             'args_provided': args is not None,
             'args_count': len(args) if args else 0
         })
-    except Exception as e:
-        logger.error("Error al crear instancia de comando", detail={
+    except Exception:
+        logger.critical("Error al crear instancia de comando", detail={
             'operation': operation,
             'class_name': import_result['data']['class_name'],
             'args': args,
-            'error': str(e),
             'traceback': traceback_format_exc()
         })
         result = error(
@@ -356,10 +349,9 @@ def execute_command_cycle(operation: str, args: dict = None) -> int:
             'exit_code': exit_code
         })
         return exit_code
-    except Exception as e:
-        logger.error("Error durante la ejecución del comando", detail={
+    except Exception:
+        logger.critical("Error durante la ejecución del comando", detail={
             'operation': operation,
-            'error': str(e),
             'traceback': traceback_format_exc()
         })
         return 1
