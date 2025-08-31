@@ -48,7 +48,10 @@ def validate_named_flags_only(args: List[str]) -> bool:
     
     for i, arg in enumerate(args):
         if arg.startswith('--'):
-            # This is a flag
+            # This is a long flag
+            expecting_value = True  # Next arg could be a value
+        elif arg.startswith('-') and len(arg) == 2 and arg[1].isalpha():
+            # This is a short flag (like -c, -h, -v)
             expecting_value = True  # Next arg could be a value
         else:
             # This is not a flag
@@ -86,6 +89,7 @@ def parse_args_to_dict(args: List[str]) -> dict:
     
     while i < len(args):
         if args[i].startswith('--'):
+            # Long flag (--flag)
             flag_count += 1
             flag_name = args[i][2:]  # Remove '--' prefix
             
@@ -94,12 +98,31 @@ def parse_args_to_dict(args: List[str]) -> dict:
                 raise ValueError("Invalid flag: '--' without flag name")
             
             # Check if next arg is a value (not a flag)
-            if i + 1 < len(args) and not args[i + 1].startswith('--'):
+            if i + 1 < len(args) and not args[i + 1].startswith('-'):
                 value = args[i + 1]
                 
                 # Basic value validation (could be extended with more rules from config)
                 if len(value) > 1000:  # Reasonable limit for flag values
                     raise ValueError(f"Flag value too long for '--{flag_name}': {len(value)} characters")
+                
+                parsed_args[flag_name] = value
+                i += 2  # Skip both flag and value
+            else:
+                # Flag without value (boolean flag)
+                parsed_args[flag_name] = True
+                i += 1
+        elif args[i].startswith('-') and len(args[i]) == 2 and args[i][1].isalpha():
+            # Short flag (-c, -h, -v, etc.)
+            flag_count += 1
+            flag_name = args[i][1]  # Remove '-' prefix and get single character
+            
+            # Check if next arg is a value (not a flag)
+            if i + 1 < len(args) and not args[i + 1].startswith('-'):
+                value = args[i + 1]
+                
+                # Basic value validation
+                if len(value) > 1000:  # Reasonable limit for flag values
+                    raise ValueError(f"Flag value too long for '-{flag_name}': {len(value)} characters")
                 
                 parsed_args[flag_name] = value
                 i += 2  # Skip both flag and value

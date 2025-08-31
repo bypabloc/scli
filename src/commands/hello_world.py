@@ -14,6 +14,9 @@ class HelloWorld(BaseCommand):
     precarga recursos necesarios y ejecuta un saludo simple usando el logger.
     """
     
+    description = "Comando simple que demuestra la estructura básica de un comando en SCLI."
+    order = 1
+    
     def validate(self) -> bool:
         """
         Valida que el comando pueda ejecutarse correctamente.

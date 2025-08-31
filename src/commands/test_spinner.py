@@ -17,6 +17,9 @@ class TestSpinner(BaseCommand):
     controlado para verificar la sincronización con el logger.
     """
     
+    description = "Comando para demostrar la funcionalidad del spinner dinámico de SCLI."
+    order = 2
+    
     def __init__(self, args: Optional[Dict[str, Any]] = None):
         """
         Inicializa el comando TestSpinner.

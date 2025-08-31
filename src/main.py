@@ -9,7 +9,8 @@ from settings.config import app_config
 from src.utils.logger import logger
 from src.utils.argument_parser import validate_named_flags_only
 from src.utils.argument_parser import parse_args_to_dict
-from src.commands.test_spinner import run_test_spinner_command
+from src.utils.dynamic_importer import execute_command_cycle
+from src.utils.interactive_selector import select_command_interactively
 
 
 def main(args: List[str] = None) -> int:
@@ -34,8 +35,8 @@ def main(args: List[str] = None) -> int:
         "args": args
     })
     
-    # Handle help request if enabled
-    if app_config.help_enabled and (not args or "--help" in args or "-h" in args):
+    # Handle help request if enabled (but not for empty args - that goes to interactive selection)
+    if app_config.help_enabled and ("--help" in args or "-h" in args):
         logger.info("Help requested", detail={"help_enabled": app_config.help_enabled})
         print(f"SCLI v{app_config.version} - Interactive CLI Application")
         print("Usage: scli [--option value] [--flag]")
@@ -65,9 +66,13 @@ def main(args: List[str] = None) -> int:
     # Parse arguments to dictionary
     parsed_args = parse_args_to_dict(args)
     
-    # Handle test-spinner command early (before other logging)
-    if "test-spinner" in parsed_args:
-        return _handle_spinner_test(parsed_args)
+    # Handle dynamic command execution system  
+    if "command" in parsed_args or "c" in parsed_args:
+        return _handle_dynamic_command(parsed_args)
+    
+    # Handle interactive command selection if no command specified
+    if not parsed_args or (len(parsed_args) == 0):
+        return _handle_interactive_selection()
     
     # Log arguments after handling special commands
     logger.info("Arguments processed successfully", detail={
@@ -94,18 +99,112 @@ def main(args: List[str] = None) -> int:
     return 0
 
 
-def _handle_spinner_test(parsed_args: Dict[str, Any]) -> int:
+def _handle_dynamic_command(parsed_args: Dict[str, Any]) -> int:
     """
-    Handle --test-spinner command using TestSpinner command class.
+    Handle dynamic command execution using the import system.
     
-    Args:
-        parsed_args: Argumentos parseados del CLI
+    Expects 'command' or 'c' key with the command name to execute.
+    Uses the dynamic importer to load and execute the command.
     
-    Returns:
-        Exit code (0 for success)
+    Parameters
+    ----------
+    parsed_args : Dict[str, Any]
+        Argumentos parseados que incluyen 'command' o 'c' con el nombre del comando
+        
+    Returns
+    -------
+    int
+        Exit code (0 for success, 1+ for error)
+        
+    Examples
+    --------
+    scli --command hello_world --name Usuario
+    scli -c hello_world --name Usuario
+    scli --command test_spinner --duration 5
+    scli -c test_spinner --duration 5
+    
+    :Authors:
+        - Pablo Contreras
+        
+    :Created:
+        - 2025-08-31
     """
-    # Ejecutar comando TestSpinner con argumentos parseados
-    return run_test_spinner_command(parsed_args)
+    command_name = parsed_args.get("command") or parsed_args.get("c")
+    
+    if not command_name:
+        logger.error("No command name provided", detail={
+            "parsed_args": parsed_args,
+            "expected_usage": "scli --command <command_name> [--option value] OR scli -c <command_name> [--option value]"
+        })
+        return 1
+    
+    logger.info("Executing dynamic command", detail={
+        "command_name": command_name,
+        "args_provided": len(parsed_args) - 1,  # Exclude 'command' key
+        "all_args": parsed_args
+    })
+    
+    # Remover 'command' y 'c' de los argumentos para pasarlos al comando
+    command_args = {k: v for k, v in parsed_args.items() if k not in ("command", "c")}
+    
+    # Ejecutar comando dinámicamente
+    try:
+        exit_code = execute_command_cycle(command_name, command_args)
+        logger.debug("Dynamic command completed", detail={
+            "command_name": command_name,
+            "exit_code": exit_code
+        })
+        return exit_code
+    except Exception as e:
+        logger.error("Error during dynamic command execution", detail={
+            "command_name": command_name,
+            "error": str(e),
+            "args": command_args
+        })
+        return 1
+
+
+def _handle_interactive_selection() -> int:
+    """
+    Maneja la selección interactiva cuando no se especifica comando.
+    
+    Muestra una interfaz para que el usuario seleccione un comando
+    de la lista de comandos disponibles.
+    
+    Returns
+    -------
+    int
+        Exit code (0 for success, 1 for error)
+        
+    :Authors:
+        - Pablo Contreras
+        
+    :Created:
+        - 2025-08-31
+    """
+    logger.info("Iniciando selección interactiva de comando")
+    
+    try:
+        selected_command = select_command_interactively()
+        
+        if selected_command:
+            logger.info("Ejecutando comando seleccionado interactivamente", detail={
+                "command": selected_command
+            })
+            # Ejecutar comando sin argumentos adicionales
+            return execute_command_cycle(selected_command, {})
+        else:
+            logger.info("Selección cancelada por usuario")
+            return 0
+            
+    except KeyboardInterrupt:
+        logger.info("Selección interrumpida por usuario (Ctrl+C)")
+        return 0
+    except Exception as e:
+        logger.error("Error durante selección interactiva", detail={
+            "error": str(e)
+        })
+        return 1
 
 
 if __name__ == "__main__":

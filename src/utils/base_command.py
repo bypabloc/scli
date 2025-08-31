@@ -23,10 +23,16 @@ class BaseCommand(ABC):
         Estado de validación del comando
     is_preloaded : bool
         Estado de precarga del comando
+    description : str
+        Descripción del comando para mostrar en la interfaz CLI (OBLIGATORIO)
+    order : int
+        Número de orden para clasificar y filtrar comandos (OBLIGATORIO)
         
     Examples
     --------
     >>> class MyCommand(BaseCommand):
+    ...     description = "Comando de ejemplo"
+    ...     order = 1
     ...     def validate(self) -> bool:
     ...         return True
     ...     def preload(self) -> bool:
@@ -36,6 +42,10 @@ class BaseCommand(ABC):
     >>> cmd = MyCommand()
     >>> cmd.is_validated
     False
+    >>> cmd.description
+    'Comando de ejemplo'
+    >>> cmd.order
+    1
     
     :Authors:
         - Pablo Contreras
@@ -49,26 +59,31 @@ class BaseCommand(ABC):
         Inicializa la clase base del comando.
         
         Establece el estado inicial del comando con argumentos vacíos
-        y estados de validación y precarga en False.
+        y estados de validación y precarga en False. Valida que el
+        atributo description esté definido en la clase hija.
         
         Parameters
         ----------
         args : Dict[str, Any], optional
             Argumentos del comando (por defecto None, se convierte en dict vacío)
             
+        Raises
+        ------
+        AttributeError
+            Si la clase no define el atributo description
+            
         Examples
         --------
-        >>> cmd = BaseCommand()
+        >>> class TestCommand(BaseCommand):
+        ...     description = "Comando de prueba"
+        ...     def validate(self): return True
+        ...     def preload(self): return True
+        ...     def execute(self): return 0
+        >>> cmd = TestCommand()
         >>> cmd.args
         {}
-        >>> cmd.is_validated
-        False
-        >>> cmd.is_preloaded
-        False
-        
-        >>> cmd_with_args = BaseCommand({"key": "value"})
-        >>> cmd_with_args.args
-        {'key': 'value'}
+        >>> cmd.description
+        'Comando de prueba'
         
         :Authors:
             - Pablo Contreras
@@ -76,12 +91,33 @@ class BaseCommand(ABC):
         :Created:
             - 2025-08-31
         """
+        # Validar que la clase hija defina description
+        if not hasattr(self, 'description') or not isinstance(self.description, str) or not self.description.strip():
+            raise AttributeError(
+                f"La clase {self.__class__.__name__} debe definir un atributo 'description' "
+                f"de tipo string no vacío para describir el comando en la interfaz CLI."
+            )
+        
+        # Validar que la clase hija defina order
+        if not hasattr(self, 'order') or not isinstance(self.order, int):
+            raise AttributeError(
+                f"La clase {self.__class__.__name__} debe definir un atributo 'order' "
+                f"de tipo int para ordenar el comando en la interfaz CLI."
+            )
+        
+        if self.order < 1:
+            raise ValueError(
+                f"La clase {self.__class__.__name__} debe tener un 'order' >= 1, "
+                f"recibido: {self.order}"
+            )
+        
         self.args = args or {}
         self.is_validated = False
         self.is_preloaded = False
         
         logger.debug("Inicializando comando base", detail={
             "command_class": self.__class__.__name__,
+            "description": self.description,
             "args_count": len(self.args),
             "args_keys": list(self.args.keys())
         })
@@ -303,6 +339,7 @@ class BaseCommand(ABC):
         """
         return {
             "command_class": self.__class__.__name__,
+            "description": self.description,
             "args": self.args,
             "args_count": len(self.args),
             "args_keys": list(self.args.keys()),
