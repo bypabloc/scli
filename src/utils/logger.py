@@ -18,6 +18,20 @@ from typing import Any
 from traceback import format_exc as traceback_format_exc
 from loguru import logger as loguru_instance
 
+try:
+    from settings.config import app_config
+except ImportError:
+    # Fallback configuration if settings not available
+    class MockConfig:
+        log_level = 'INFO'
+        log_file_enabled = True
+        log_console_enabled = True
+        log_format = '{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}'
+        environment = 'dev'
+        debug_mode = True
+        
+    app_config = MockConfig()
+
 
 def _get_relative_path(record):
     """Get relative path from src/ directory."""
@@ -65,7 +79,10 @@ class Logger:
         self._setup_file_handlers()
     
     def _setup_console_handler(self):
-        """Configure colored console output with enhanced formatting."""
+        """Configure colored console output with enhanced formatting using app_config."""
+        if not app_config.log_console_enabled:
+            return  # Skip console handler if disabled
+            
         def format_with_relative_path(record):
             relative_path = _get_relative_path(record)
             record["extra"]["relative_path"] = relative_path
@@ -76,18 +93,22 @@ class Logger:
                 "<level>{message}</level>\n"
             )
         
+        # Use configured log level
         loguru_instance.add(
             sys.stderr,
             format=format_with_relative_path,
-            level="DEBUG",
+            level=app_config.log_level,
             colorize=True,
-            backtrace=True,
-            diagnose=True,
+            backtrace=app_config.debug_mode,
+            diagnose=app_config.debug_mode,
             enqueue=True  # Thread-safe
         )
     
     def _setup_file_handlers(self):
-        """Setup file logging with rotation and retention."""
+        """Setup file logging with rotation and retention using app_config."""
+        if not app_config.log_file_enabled:
+            return  # Skip file handlers if disabled
+            
         # Create logs directory if it doesn't exist
         logs_dir = Path("logs")
         logs_dir.mkdir(exist_ok=True)
@@ -95,38 +116,40 @@ class Logger:
         # General application logs
         loguru_instance.add(
             logs_dir / "scli_{time:YYYY-MM-DD}.log",
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message}",
-            level="INFO",
+            format=app_config.log_format,
+            level=app_config.log_level,
             rotation="00:00",  # New file daily at midnight
             retention="7 days",  # Keep logs for 7 days
             compression="zip",  # Compress old logs
             enqueue=True
         )
         
-        # Error-specific logs
-        loguru_instance.add(
-            logs_dir / "scli_errors_{time:YYYY-MM-DD}.log",
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message} | {extra}",
-            level="ERROR",
-            rotation="10 MB",  # New file every 10MB
-            retention="30 days",  # Keep error logs for 30 days
-            compression="zip",
-            enqueue=True,
-            backtrace=True,
-            diagnose=True
-        )
+        # Error-specific logs (only if error logging is enabled)
+        if app_config.log_error_enabled:
+            loguru_instance.add(
+                logs_dir / "scli_errors_{time:YYYY-MM-DD}.log",
+                format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message} | {extra}",
+                level="ERROR",
+                rotation="10 MB",  # New file every 10MB
+                retention="30 days",  # Keep error logs for 30 days
+                compression="zip",
+                enqueue=True,
+                backtrace=app_config.debug_mode,
+                diagnose=app_config.debug_mode
+            )
         
-        # JSON structured logs for production analysis
-        loguru_instance.add(
-            logs_dir / "scli_structured_{time:YYYY-MM-DD}.json",
-            format="{message}",
-            level="INFO",
-            rotation="100 MB",
-            retention="14 days",
-            compression="zip",
-            serialize=True,  # JSON format
-            enqueue=True
-        )
+        # JSON structured logs for production analysis (only in production)
+        if app_config.environment == 'prod':
+            loguru_instance.add(
+                logs_dir / "scli_structured_{time:YYYY-MM-DD}.json",
+                format="{message}",
+                level=app_config.log_level,
+                rotation="100 MB",
+                retention="14 days",
+                compression="zip",
+                serialize=True,  # JSON format
+                enqueue=True
+            )
     
     def get_logger(self):
         """Get configured loguru logger instance."""
@@ -173,13 +196,19 @@ class Logger:
     
     def _validate_and_log(self, level: str, message: str, detail):
         """
-        Validate logging parameters and perform actual logging.
+        Validate logging parameters and perform actual logging using app_config settings.
         
         Args:
             level: Log level (trace, debug, info, success, warning, error, critical)
             message: Must be a plain string, no f-strings or b-strings allowed
             detail: Optional dict with additional data, or None/False to ignore
         """
+        # Check if logging is enabled for this level in app_config
+        level_enabled_attr = f"log_{level}_enabled"
+        if hasattr(app_config, level_enabled_attr):
+            if not getattr(app_config, level_enabled_attr):
+                return  # Skip logging if disabled in config
+        
         # Validate message is a plain string
         if not isinstance(message, str):
             raise TypeError(f"Log message must be a plain string, got {type(message).__name__}")

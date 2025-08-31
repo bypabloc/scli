@@ -185,22 +185,22 @@ Examples:
         error("Current directory should contain 'tests/' folder")
         return 1
         
-    success = True
+    test_success = True
     
     if args.integration:
-        success = run_integration_tests()
+        test_success = run_integration_tests()
     elif args.e2e:
-        success = run_e2e_tests()
+        test_success = run_e2e_tests()
     elif args.fast:
-        success = run_fast_tests()
+        test_success = run_fast_tests()
     elif args.coverage:
-        success = run_with_coverage()
+        test_success = run_with_coverage()
     else:
         # Run all tests by default
-        success = run_all_tests()
+        test_success = run_all_tests()
     
     info("\n" + "=" * 50)
-    if success:
+    if test_success:
         success("🎉 All tests completed successfully!")
         success("Integration tests: Components working together")
         success("E2E tests: Complete user workflows") 

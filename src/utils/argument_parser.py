@@ -6,10 +6,20 @@ Functions for validating and parsing command-line arguments with named flag patt
 
 from typing import List
 
+try:
+    from settings.config import app_config
+except ImportError:
+    # Fallback configuration if settings not available
+    class MockConfig:
+        max_args_length = 1000
+        validate_named_flags_only = True
+        
+    app_config = MockConfig()
+
 
 def validate_named_flags_only(args: List[str]) -> bool:
     """
-    Validate that all arguments follow named flag pattern.
+    Validate that all arguments follow named flag pattern using app_config settings.
     
     Valid patterns:
     - [] (empty)
@@ -31,6 +41,15 @@ def validate_named_flags_only(args: List[str]) -> bool:
     if not args:  # Empty args are valid
         return True
     
+    # Check if named flag validation is enabled in config
+    if not app_config.validate_named_flags_only:
+        return True  # Skip validation if disabled
+    
+    # Check argument count limit
+    max_length = app_config.max_args_length or 1000
+    if len(args) > max_length:
+        return False
+    
     expecting_value = False
     
     for i, arg in enumerate(args):
@@ -51,24 +70,44 @@ def validate_named_flags_only(args: List[str]) -> bool:
 
 def parse_args_to_dict(args: List[str]) -> dict:
     """
-    Parse named flag arguments into a dictionary.
+    Parse named flag arguments into a dictionary using app_config settings.
     
     Args:
         args: List of command line arguments with named flags
         
     Returns:
         Dictionary with flag names as keys and their values
+        
+    Raises:
+        ValueError: If arguments exceed configured limits or contain invalid patterns
     """
+    # Check argument count limit
+    max_length = app_config.max_args_length or 1000
+    if len(args) > max_length:
+        raise ValueError(f"Too many arguments: {len(args)} exceeds limit of {max_length}")
+    
     parsed_args = {}
     i = 0
+    flag_count = 0
     
     while i < len(args):
         if args[i].startswith('--'):
+            flag_count += 1
             flag_name = args[i][2:]  # Remove '--' prefix
+            
+            # Validate flag name is not empty
+            if not flag_name:
+                raise ValueError("Invalid flag: '--' without flag name")
             
             # Check if next arg is a value (not a flag)
             if i + 1 < len(args) and not args[i + 1].startswith('--'):
-                parsed_args[flag_name] = args[i + 1]
+                value = args[i + 1]
+                
+                # Basic value validation (could be extended with more rules from config)
+                if len(value) > 1000:  # Reasonable limit for flag values
+                    raise ValueError(f"Flag value too long for '--{flag_name}': {len(value)} characters")
+                
+                parsed_args[flag_name] = value
                 i += 2  # Skip both flag and value
             else:
                 # Flag without value (boolean flag)
@@ -77,5 +116,20 @@ def parse_args_to_dict(args: List[str]) -> dict:
         else:
             # This shouldn't happen if validation passed
             i += 1
-            
+    
     return parsed_args
+
+
+def get_argument_validation_config() -> dict:
+    """
+    Get current argument validation configuration from app_config.
+    
+    Returns:
+        Dictionary with validation settings
+    """
+    return {
+        'max_args_length': app_config.max_args_length or 1000,
+        'validate_named_flags_only': app_config.validate_named_flags_only,
+        'help_enabled': app_config.help_enabled,
+        'version': app_config.version or '1.0.0'
+    }
