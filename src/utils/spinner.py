@@ -1,21 +1,11 @@
-"""
-SCLI Spinner Utility
-
-Advanced loading indicators with morphing text, brightness effects, and innovative animations.
-Inspired by Claude Code's dynamic spinner patterns with gradual character transitions.
-
-Features:
-- Morphing text spinners with brightness effects
-- Unicode-based animations with character transitions
-- Context manager support for easy integration
-- Custom spinner patterns with configurable timing
-- Thread-safe operations with proper cleanup
-"""
-
-import time
-import threading
-import sys
-from typing import Optional, List, Union, Iterator
+from sys import stdout as sys_stdout
+from time import sleep as time_sleep
+from threading import Thread as threading_Thread
+from threading import Event as threading_Event
+from typing import Optional
+from typing import List
+from typing import Union
+from typing import Iterator
 from contextlib import contextmanager
 
 from src.utils.logger import logger
@@ -168,9 +158,9 @@ class Spinner:
         # Use configured spinner speed if interval not specified
         self.interval = interval if interval is not None else app_config.spinner_speed
         self.text = text
-        self.stream = stream or sys.stdout
-        self._stop_event = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self.stream = stream or sys_stdout
+        self._stop_event = threading_Event()
+        self._thread: Optional[threading_Thread] = None
         self._current_frame = 0
         self._is_running = False
     
@@ -304,7 +294,7 @@ class Spinner:
         self.stream.flush()
         
         # Start animation thread
-        self._thread = threading.Thread(target=self._spin, daemon=True)
+        self._thread = threading_Thread(target=self._spin, daemon=True)
         self._thread.start()
     
     def stop(self, final_text: Optional[str] = None):

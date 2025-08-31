@@ -1,13 +1,11 @@
-"""
-Main entry point for SCLI application
-"""
-
-import sys
+from sys import argv as sys_argv
+from sys import exit as sys_exit
 from typing import List
 
 from settings.config import app_config
 from src.utils.logger import logger
-from src.utils.argument_parser import validate_named_flags_only, parse_args_to_dict
+from src.utils.argument_parser import validate_named_flags_only
+from src.utils.argument_parser import parse_args_to_dict
 
 
 def main(args: List[str] = None) -> int:
@@ -21,7 +19,7 @@ def main(args: List[str] = None) -> int:
         Exit code (0 for success, 1 for error)
     """
     if args is None:
-        args = sys.argv[1:]
+        args = sys_argv[1:]
     
     # Log startup with configuration context
     logger.success("🚀 SCLI - Python CLI Project")
@@ -73,8 +71,8 @@ def main(args: List[str] = None) -> int:
     
     # Display output based on configured format
     if app_config.output_format == "json":
-        import json
-        print(json.dumps(parsed_args, indent=2))
+        from json import dumps as json_dumps
+        print(json_dumps(parsed_args, indent=2))
     elif app_config.output_format == "table":
         if parsed_args:
             for key, value in parsed_args.items():
@@ -98,7 +96,7 @@ def _handle_spinner_test() -> int:
     Returns:
         Exit code (0 for success)
     """
-    import time
+    from time import sleep as time_sleep
     from src.utils.spinner import create_spinner
     
     logger.info("Starting spinner test demonstration")
@@ -110,19 +108,19 @@ def _handle_spinner_test() -> int:
         spinner.start()
         
         # First 2 seconds - Initialization
-        time.sleep(2)
+        time_sleep(2)
         spinner.update_text("Loading configuration")
         
         # Second 2 seconds - Processing
-        time.sleep(2)
+        time_sleep(2)
         spinner.update_text("Processing data")
         
         # Third 2 seconds - Finalizing
-        time.sleep(2)
+        time_sleep(2)
         spinner.update_text("Finalizing operations")
         
         # Fourth 2 seconds - Completion
-        time.sleep(2)
+        time_sleep(2)
         
         # Complete
         spinner.stop()
@@ -137,4 +135,4 @@ def _handle_spinner_test() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys_exit(main())

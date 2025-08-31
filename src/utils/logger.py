@@ -1,18 +1,5 @@
-"""
-SCLI Logging Utility
-
-Centralized logging system using Loguru with enhanced console and file output.
-Provides colored console logs with file path, datetime, and structured formatting.
-
-Best practices:
-- NEVER use print() directly, always use this logger
-- Use appropriate log levels: trace, debug, info, success, warning, error, critical
-- Include context with extra information when needed
-- Configure rotation and retention for production use
-"""
-
-import sys
-import os
+from sys import stderr as sys_stderr
+from os.path import exists as os_path_exists
 from pathlib import Path
 from typing import Any
 from traceback import format_exc as traceback_format_exc
@@ -95,7 +82,7 @@ class Logger:
         
         # Use configured log level
         loguru_instance.add(
-            sys.stderr,
+            sys_stderr,
             format=format_with_relative_path,
             level=app_config.log_level,
             colorize=True,
@@ -240,7 +227,7 @@ class Logger:
         """Configure logger for testing environment (less verbose)."""
         loguru_instance.remove()  # Remove all handlers
         loguru_instance.add(
-            sys.stderr,
+            sys_stderr,
             format="<level>{level: <8}</level> | <cyan>{file.path}:{line}</cyan> | {message}",
             level="WARNING",  # Only warnings and above in tests
             colorize=True
@@ -252,14 +239,14 @@ class Logger:
         
         # Console: Only critical errors
         loguru_instance.add(
-            sys.stderr,
+            sys_stderr,
             format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message}",
             level="ERROR",
             colorize=False  # No colors in production console
         )
         
         # Enhanced file logging for production
-        logs_dir = Path("/var/log/scli") if os.path.exists("/var/log") else Path("logs")
+        logs_dir = Path("/var/log/scli") if os_path_exists("/var/log") else Path("logs")
         logs_dir.mkdir(exist_ok=True, parents=True)
         
         loguru_instance.add(

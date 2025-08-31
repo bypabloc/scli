@@ -1,19 +1,8 @@
-"""
-Docstring Generator Utility
-
-Genera docstrings con valores dinámicos obtenidos de git config y fecha actual.
-Útil para mantener consistencia en la documentación del código.
-
-:Authors:
-    - Pablo Contreras
-
-:Created:
-    - 2025-08-30
-"""
-
-import subprocess
+from subprocess import run as subprocess_run
+from subprocess import CalledProcessError as subprocess_CalledProcessError
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional
+from typing import Dict
 
 
 def get_git_author() -> str:
@@ -32,14 +21,14 @@ def get_git_author() -> str:
         - 2025-08-30
     """
     try:
-        result = subprocess.run(
+        result = subprocess_run(
             ['git', 'config', '--global', 'user.name'], 
             capture_output=True, 
             text=True, 
             check=True
         )
         return result.stdout.strip()
-    except subprocess.CalledProcessError:
+    except subprocess_CalledProcessError:
         return "Pablo Contreras"  # Fallback
 
 
@@ -59,14 +48,14 @@ def get_git_email() -> str:
         - 2025-08-30
     """
     try:
-        result = subprocess.run(
+        result = subprocess_run(
             ['git', 'config', '--global', 'user.email'], 
             capture_output=True, 
             text=True, 
             check=True
         )
         return result.stdout.strip()
-    except subprocess.CalledProcessError:
+    except subprocess_CalledProcessError:
         return "pacg1991@gmail.com"  # Fallback
 
 

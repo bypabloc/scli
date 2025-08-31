@@ -95,7 +95,7 @@ uv tree                      # Show dependency tree
 ### 2. Import Organization (STRICT)
 ```python
 # ALWAYS use this 3-section structure (no comments):
-import sys
+from sys import argv as sys_argv
 from typing import List
 
 from django.contrib.auth.models import User
@@ -108,10 +108,15 @@ from src.utils.argument_parser import validate_named_flags_only
 **Rules:**
 - ✅ 3 sections: Native → Third-party → Project files
 - ✅ Blank lines between sections
-- ✅ Specific imports: `from typing import Dict` not `import typing`
-- ✅ One import per line for project files
+- ✅ **SPECIFIC IMPORTS ONLY**: `from typing import Dict` not `import typing`
+- ✅ **FORBIDDEN GENERAL IMPORTS**: `import sys` → use `from sys import argv as sys_argv`
+- ✅ **ALIAS PATTERN**: `<from>_<import>` → `from sys import argv as sys_argv`
+- ✅ **ONE IMPORT PER LINE**: `from threading import Thread as threading_Thread\nfrom threading import Event as threading_Event`
+- ✅ **FORBIDDEN MULTIPLE IMPORTS**: `from typing import Optional, List` → use separate lines
 - ❌ NO section comments
 - ❌ NO mixing imports from different categories
+- ❌ **NEVER** use general imports like `import sys`, `import os`, `import json`
+- ❌ **NEVER** use multiple imports on one line like `from typing import Optional, List`
 
 ### 3. Logger Format (ENFORCED)
 ```python
@@ -169,6 +174,8 @@ def example_function(param: str) -> Dict:
 - ✅ Include Examples section with doctests
 - ✅ Update :Updated: date when modifying function I/O
 - ✅ Examples must reflect current functionality
+- ❌ **FORBIDDEN**: File-level docstrings at the beginning of files
+- ❌ **NEVER** add docstrings as the first lines of `.py` files
 
 ### 5. Argument Validation (STRICT)
 ```python
