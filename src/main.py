@@ -58,16 +58,18 @@ def main(args: List[str] = None) -> int:
             logger.error("Use --help for usage information.")
         return 1
     
-    # Parse arguments to dictionary and display
+    # Parse arguments to dictionary
     parsed_args = parse_args_to_dict(args)
+    
+    # Handle test-spinner command early (before other logging)
+    if "test-spinner" in parsed_args:
+        return _handle_spinner_test()
+    
+    # Log arguments after handling special commands
     logger.info("Arguments processed successfully", detail={
         "parsed_args": parsed_args,
         "output_format": app_config.output_format
     })
-    
-    # Handle test-spinner command
-    if "test-spinner" in parsed_args:
-        return _handle_spinner_test()
     
     # Display output based on configured format
     if app_config.output_format == "json":

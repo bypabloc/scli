@@ -1,4 +1,4 @@
-from sys import stdout as sys_stdout
+from sys import stderr as sys_stderr
 from time import sleep as time_sleep
 from threading import Thread as threading_Thread
 from threading import Event as threading_Event
@@ -158,7 +158,7 @@ class Spinner:
         # Use configured spinner speed if interval not specified
         self.interval = interval if interval is not None else app_config.spinner_speed
         self.text = text
-        self.stream = stream or sys_stdout
+        self.stream = stream or sys_stderr
         self._stop_event = threading_Event()
         self._thread: Optional[threading_Thread] = None
         self._current_frame = 0
@@ -246,8 +246,8 @@ class Spinner:
             
             frame = brightness_frames[frame_index % len(brightness_frames)]
             
-            # Clear line and write frame (use fixed width clearing)
-            self.stream.write('\r' + ' ' * 50 + '\r' + frame)
+            # Clear line completely and write frame
+            self.stream.write('\r\033[2K' + frame)
             self.stream.flush()
             
             # Move to next frame
@@ -289,6 +289,10 @@ class Spinner:
             "speed": self.interval
         })
         
+        # Ensure we're on a clean line
+        self.stream.write('\r\033[2K')  # Clear entire current line
+        self.stream.flush()
+        
         # Hide cursor for cleaner output
         self.stream.write('\033[?25l')
         self.stream.flush()
@@ -312,16 +316,17 @@ class Spinner:
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=1.0)
         
-        # Complete cleaning: clear current line and move up to clear previous lines
-        self.stream.write('\r' + ' ' * 80 + '\r')  # Clear current line completely
-        self.stream.write('\033[1A\033[K')  # Move up and clear that line too
-        self.stream.write('\r')  # Return to start of line
+        # Complete cleanup sequence
+        # Clear the entire line where spinner was
+        self.stream.write('\r\033[2K')  # Move to start and clear line
+        self.stream.flush()
         
-        # Show final text if provided with line break
+        # Show final text if provided
         if final_text:
             self.stream.write(f"{final_text}\n")
+            self.stream.flush()
         
-        # Restore cursor
+        # Restore cursor visibility
         self.stream.write('\033[?25h')
         self.stream.flush()
         

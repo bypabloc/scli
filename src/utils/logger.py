@@ -3,6 +3,7 @@ from os.path import exists as os_path_exists
 from pathlib import Path
 from typing import Any
 from traceback import format_exc as traceback_format_exc
+from json import dumps as json_dumps
 from loguru import logger as loguru_instance
 
 try:
@@ -13,7 +14,7 @@ except ImportError:
         log_level = 'INFO'
         log_file_enabled = True
         log_console_enabled = True
-        log_format = '{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}'
+        log_format = '{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message} | {extra}'
         environment = 'dev'
         debug_mode = True
         
@@ -21,24 +22,52 @@ except ImportError:
 
 
 def _get_relative_path(record):
-    """Get relative path from src/ directory."""
+    """
+    Get relative path from project root, always showing src/ prefix.
+    
+    Parameters
+    ----------
+    record : dict
+        Loguru record containing file information
+        
+    Returns
+    -------
+    str
+        Relative path from project root (e.g., "src/utils/logger.py")
+        
+    Examples
+    --------
+    >>> record = {'file': type('obj', (object,), {'path': '/home/user/project/src/main.py'})()}
+    >>> _get_relative_path(record)
+    'src/main.py'
+    
+    :Authors:
+        - Pablo Contreras
+
+    :Created:
+        - 2025-08-31
+    """
     file_path = Path(record["file"].path)
     try:
-        # Find project root and get path relative to src/
+        # Find project root by looking for pyproject.toml
         current_dir = Path.cwd()
         if (current_dir / "pyproject.toml").exists():
+            # Get path relative to project root
             full_relative = file_path.relative_to(current_dir)
-            # Remove 'src/' prefix if it exists
-            if full_relative.parts[0] == "src":
-                return "/".join(full_relative.parts[1:])
-            else:
-                return str(full_relative)
+            return str(full_relative)
         else:
-            # Fallback to just filename if can't find project root
-            return file_path.name
+            # Fallback: try to find src/ in the path and show from there
+            parts = file_path.parts
+            if "src" in parts:
+                src_index = parts.index("src")
+                return "/".join(parts[src_index:])
+            else:
+                # Last fallback to just filename
+                return file_path.name
     except (ValueError, IndexError):
-        # If file is outside project, use filename
+        # If file is outside project or any error occurs, use filename
         return file_path.name
+
 
 
 class Logger:
@@ -66,19 +95,29 @@ class Logger:
         self._setup_file_handlers()
     
     def _setup_console_handler(self):
-        """Configure colored console output with enhanced formatting using app_config."""
+        """Configure colored console output using app_config.log_format with colors."""
         if not app_config.log_console_enabled:
             return  # Skip console handler if disabled
             
         def format_with_relative_path(record):
+            # Get relative path and replace in format
             relative_path = _get_relative_path(record)
-            record["extra"]["relative_path"] = relative_path
-            return (
+            
+            # Build colored format based on config format structure
+            console_format = (
                 "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
                 "<level>{level: <8}</level> | "
-                f"<cyan>{relative_path}:{record['line']}</cyan> | "
-                "<level>{message}</level>\n"
+                f"<cyan>{relative_path}:{{line}}</cyan> | "
+                "<level>{message}</level>"
             )
+            
+            # If the config format includes {extra}, add it with color
+            if '{extra}' in app_config.log_format:
+                console_format += " | <dim>{extra}</dim>"
+            
+            # Add newline
+            console_format += "\n"
+            return console_format
         
         # Use configured log level
         loguru_instance.add(
@@ -115,7 +154,7 @@ class Logger:
         if app_config.log_error_enabled:
             loguru_instance.add(
                 logs_dir / "scli_errors_{time:YYYY-MM-DD}.log",
-                format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message} | {extra}",
+                format=app_config.log_format,
                 level="ERROR",
                 rotation="10 MB",  # New file every 10MB
                 retention="30 days",  # Keep error logs for 30 days
@@ -215,8 +254,7 @@ class Logger:
         # Log with or without detail context
         if detail and isinstance(detail, dict):
             # Build message with detail information
-            import json
-            detail_str = json.dumps(detail, separators=(',', ':'))
+            detail_str = json_dumps(detail, separators=(',', ':'))
             full_message = f"{message} | {detail_str}"
             log_method(full_message)
         else:
@@ -228,7 +266,7 @@ class Logger:
         loguru_instance.remove()  # Remove all handlers
         loguru_instance.add(
             sys_stderr,
-            format="<level>{level: <8}</level> | <cyan>{file.path}:{line}</cyan> | {message}",
+            format=app_config.log_format,
             level="WARNING",  # Only warnings and above in tests
             colorize=True
         )
@@ -240,7 +278,7 @@ class Logger:
         # Console: Only critical errors
         loguru_instance.add(
             sys_stderr,
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message}",
+            format=app_config.log_format,
             level="ERROR",
             colorize=False  # No colors in production console
         )
@@ -251,7 +289,7 @@ class Logger:
         
         loguru_instance.add(
             logs_dir / "scli_production.log",
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message}",
+            format=app_config.log_format,
             level="INFO",
             rotation="50 MB",
             retention="90 days",
