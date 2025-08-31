@@ -1,18 +1,10 @@
 #!/usr/bin/env python3
-"""
-Test runner for SCLI project
-
-Executes all integration and e2e tests without unit tests.
-Custom test runner that follows the project's testing philosophy.
-"""
-
 import subprocess
 import sys
 import argparse
 from pathlib import Path
 from typing import List, Optional
 
-# Configure logger for testing environment
 try:
     from src.utils.logger import info, error, success, warning, configure_for_testing
     configure_for_testing()

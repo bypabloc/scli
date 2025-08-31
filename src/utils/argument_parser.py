@@ -1,9 +1,3 @@
-"""
-Argument parsing utilities for SCLI application
-
-Functions for validating and parsing command-line arguments with named flag patterns.
-"""
-
 from typing import List
 
 try:

@@ -113,8 +113,10 @@ from src.utils.argument_parser import validate_named_flags_only
 - ✅ **ALIAS PATTERN**: `<from>_<import>` → `from sys import argv as sys_argv`
 - ✅ **ONE IMPORT PER LINE**: `from threading import Thread as threading_Thread\nfrom threading import Event as threading_Event`
 - ✅ **FORBIDDEN MULTIPLE IMPORTS**: `from typing import Optional, List` → use separate lines
+- ✅ **IMPORTS ONLY AT TOP**: ALL imports MUST be at the beginning of the file
 - ❌ NO section comments
 - ❌ NO mixing imports from different categories
+- ❌ **STRICTLY FORBIDDEN**: Inline imports within functions or conditional blocks
 - ❌ **NEVER** use general imports like `import sys`, `import os`, `import json`
 - ❌ **NEVER** use multiple imports on one line like `from typing import Optional, List`
 

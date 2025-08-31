@@ -3,11 +3,13 @@ from sys import exit as sys_exit
 from typing import List
 from typing import Dict
 from typing import Any
+from json import dumps as json_dumps
 
 from settings.config import app_config
 from src.utils.logger import logger
 from src.utils.argument_parser import validate_named_flags_only
 from src.utils.argument_parser import parse_args_to_dict
+from src.commands.test_spinner import run_test_spinner_command
 
 
 def main(args: List[str] = None) -> int:
@@ -75,7 +77,6 @@ def main(args: List[str] = None) -> int:
     
     # Display output based on configured format
     if app_config.output_format == "json":
-        from json import dumps as json_dumps
         print(json_dumps(parsed_args, indent=2))
     elif app_config.output_format == "table":
         if parsed_args:
@@ -103,8 +104,6 @@ def _handle_spinner_test(parsed_args: Dict[str, Any]) -> int:
     Returns:
         Exit code (0 for success)
     """
-    from src.commands.test_spinner import run_test_spinner_command
-    
     # Ejecutar comando TestSpinner con argumentos parseados
     return run_test_spinner_command(parsed_args)
 

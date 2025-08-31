@@ -1,10 +1,8 @@
-"""
-Integration tests for main.py module
-
-Testing how main() works with other components - no mocks
-"""
-
 import pytest
+import inspect
+import sys
+from typing import get_type_hints
+
 from src.main import main
 
 
@@ -96,10 +94,6 @@ def test_main_function_integration_with_imports():
     
     Verifies all required modules are imported and working together.
     """
-    # Verify main can be imported and has correct signature
-    import inspect
-    from typing import get_type_hints
-    
     # Integration test: module imports + function definition
     signature = inspect.signature(main)
     type_hints = get_type_hints(main)
@@ -110,7 +104,6 @@ def test_main_function_integration_with_imports():
     assert type_hints['return'] == int
     
     # Test that all imports in main.py work together
-    from src.main import sys
     assert sys is not None
     
     # Verify the function can be called (integration test)

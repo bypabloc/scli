@@ -1,10 +1,10 @@
-"""
-Integration tests for CLI application
-
-Testing how multiple components work together - no mocks
-"""
-
 import pytest
+import typer
+from io import StringIO
+
+from rich.console import Console
+from typer.testing import CliRunner
+from src.main import main
 
 
 @pytest.mark.integration
@@ -17,8 +17,6 @@ class TestCliComponentIntegration:
         
         Integration: main() + rich + typer components.
         """
-        from src.main import main
-        
         # Act - real integration, no mocks
         result = main([])
         
@@ -31,8 +29,6 @@ class TestCliComponentIntegration:
         
         Tests how main() integrates with named flags validation.
         """
-        from src.main import main
-        
         # Test valid named flag patterns (should work)
         valid_patterns = [
             [],
@@ -73,9 +69,6 @@ class TestDependencyIntegration:
         
         Integration: Rich Console + our application components.
         """
-        from rich.console import Console
-        from io import StringIO
-        
         # Act - real Rich integration
         fake_stdout = StringIO()
         console = Console(file=fake_stdout)
@@ -92,9 +85,6 @@ class TestDependencyIntegration:
         
         Integration: Typer + our CLI structure.
         """
-        import typer
-        from typer.testing import CliRunner
-        
         # Act - create typer app and runner integration
         app = typer.Typer()
         runner = CliRunner()
