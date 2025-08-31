@@ -14,6 +14,7 @@ except ImportError:
         log_level = 'INFO'
         log_file_enabled = True
         log_console_enabled = True
+        log_error_enabled = True
         log_format = '{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {file.path}:{line} | {message} | {extra}'
         environment = 'dev'
         debug_mode = True

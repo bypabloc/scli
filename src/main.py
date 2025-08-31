@@ -1,6 +1,8 @@
 from sys import argv as sys_argv
 from sys import exit as sys_exit
 from typing import List
+from typing import Dict
+from typing import Any
 
 from settings.config import app_config
 from src.utils.logger import logger
@@ -63,7 +65,7 @@ def main(args: List[str] = None) -> int:
     
     # Handle test-spinner command early (before other logging)
     if "test-spinner" in parsed_args:
-        return _handle_spinner_test()
+        return _handle_spinner_test(parsed_args)
     
     # Log arguments after handling special commands
     logger.info("Arguments processed successfully", detail={
@@ -91,49 +93,20 @@ def main(args: List[str] = None) -> int:
     return 0
 
 
-def _handle_spinner_test() -> int:
+def _handle_spinner_test(parsed_args: Dict[str, Any]) -> int:
     """
-    Handle --test-spinner command to demonstrate spinner functionality.
+    Handle --test-spinner command using TestSpinner command class.
+    
+    Args:
+        parsed_args: Argumentos parseados del CLI
     
     Returns:
         Exit code (0 for success)
     """
-    from time import sleep as time_sleep
-    from src.utils.spinner import create_spinner
+    from src.commands.test_spinner import run_test_spinner_command
     
-    logger.info("Starting spinner test demonstration")
-    
-    # Create spinner using app_config settings
-    spinner = create_spinner("Initializing test")
-    
-    try:
-        spinner.start()
-        
-        # First 2 seconds - Initialization
-        time_sleep(2)
-        spinner.update_text("Loading configuration")
-        
-        # Second 2 seconds - Processing
-        time_sleep(2)
-        spinner.update_text("Processing data")
-        
-        # Third 2 seconds - Finalizing
-        time_sleep(2)
-        spinner.update_text("Finalizing operations")
-        
-        # Fourth 2 seconds - Completion
-        time_sleep(2)
-        
-        # Complete
-        spinner.stop()
-        
-    except Exception as e:
-        spinner.stop("❌ Spinner test failed")
-        logger.error("Spinner test error", detail={"error": str(e)})
-        return 1
-    
-    logger.success("Spinner test demonstration completed")
-    return 0
+    # Ejecutar comando TestSpinner con argumentos parseados
+    return run_test_spinner_command(parsed_args)
 
 
 if __name__ == "__main__":
