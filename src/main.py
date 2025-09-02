@@ -5,7 +5,7 @@ from typing import Dict
 from typing import Any
 from json import dumps as json_dumps
 
-from settings.config import app_config
+from src.settings.config import app_config
 from src.utils.logger import logger
 from src.utils.argument_parser import validate_named_flags_only
 from src.utils.argument_parser import parse_args_to_dict

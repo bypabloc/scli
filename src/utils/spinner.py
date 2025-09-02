@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from src.utils.logger import logger
 
 try:
-    from settings.config import app_config
+    from src.settings.config import app_config
 except ImportError:
     # Fallback configuration if settings not available
     class MockConfig:

@@ -23,7 +23,7 @@ class TestAppConfigIntegration:
         - Configuración por defecto está presente
         """
         # Act - importar AppConfig
-        from settings.config import AppConfig, app_config
+        from src.settings.config import AppConfig, app_config
         
         # Assert - configuración está disponible
         assert isinstance(app_config, AppConfig)
@@ -44,7 +44,7 @@ class TestAppConfigIntegration:
         """
         Test que falla - AppConfig debe cargar variables de entorno específicas.
         """
-        from settings.config import AppConfig
+        from src.settings.config import AppConfig
         
         # Arrange - establecer variables de entorno específicas
         os.environ['ENVIRONMENT'] = 'prod'
@@ -72,7 +72,7 @@ class TestAppConfigIntegration:
         """
         Test que falla - AppConfig debe tener configuración para spinners.
         """
-        from settings.config import app_config
+        from src.settings.config import app_config
         
         # Assert - configuración de spinner está presente
         assert hasattr(app_config, 'spinner_enabled')
@@ -89,7 +89,7 @@ class TestAppConfigIntegration:
         """
         Test que falla - AppConfig debe tener configuración completa de logging.
         """
-        from settings.config import app_config
+        from src.settings.config import app_config
         
         # Assert - configuración de logging está presente
         assert hasattr(app_config, 'log_level')
@@ -108,7 +108,7 @@ class TestAppConfigIntegration:
         """
         Test que falla - AppConfig debe tener configuración para CLI.
         """
-        from settings.config import app_config
+        from src.settings.config import app_config
         
         # Assert - configuración CLI está presente
         assert hasattr(app_config, 'max_args_length')
@@ -128,7 +128,7 @@ class TestAppConfigIntegration:
         """
         Test que falla - AppConfig debe validar configuración correctamente.
         """
-        from settings.config import app_config
+        from src.settings.config import app_config
         
         # Act - validar configuración
         is_valid = app_config.is_valid()
@@ -149,7 +149,7 @@ class TestAppConfigIntegration:
         """
         Test que falla - AppConfig debe tener validaciones específicas por ambiente.
         """
-        from settings.config import AppConfig
+        from src.settings.config import AppConfig
         
         # Test para ambiente de desarrollo
         os.environ['ENVIRONMENT'] = 'dev'
@@ -181,7 +181,7 @@ def test_app_config_integration_with_logger():
     
     Verifica que AppConfig puede configurar el logger correctamente.
     """
-    from settings.config import app_config
+    from src.settings.config import app_config
     from src.utils.logger import info
     
     # Act - usar configuración con logger
@@ -203,7 +203,7 @@ def test_app_config_integration_with_spinner():
     
     Verifica que AppConfig puede configurar spinners correctamente.
     """
-    from settings.config import app_config
+    from src.settings.config import app_config
     from src.utils.spinner import create_spinner
     
     # Act - usar configuración para crear spinner

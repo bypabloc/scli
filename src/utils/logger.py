@@ -7,7 +7,7 @@ from json import dumps as json_dumps
 from loguru import logger as loguru_instance
 
 try:
-    from settings.config import app_config
+    from src.settings.config import app_config
 except ImportError:
     # Fallback configuration if settings not available
     class MockConfig:

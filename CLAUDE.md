@@ -27,9 +27,13 @@
 ### Directory Structure
 ```
 scli/
-├── src/                      # Source code (main package)
+├── src/                      # Source code (ALL business logic MUST be here)
 │   ├── main.py              # Entry point (MINIMAL - delegates to utils)
+│   ├── settings/            # Application configuration (REQUIRED)
+│   │   ├── __init__.py      # Settings package init
+│   │   └── config.py        # AppConfig class with app_config instance
 │   └── utils/               # Business logic (ALL functions here)
+│       ├── base_settings.py # Configuration base class
 │       ├── logger.py        # Centralized logging with Loguru
 │       ├── argument_parser.py # Named flags validation
 │       ├── spinner.py       # Dynamic loading indicators
@@ -42,10 +46,13 @@ scli/
 ```
 
 ### Architecture Principles
-1. **utils/ pattern**: ALL reusable functions go in `src/utils/`
-2. **Minimal main.py**: Entry point only, no business logic
-3. **No unit tests**: Only integration (70%) and e2e (30%) tests
-4. **TDD mandatory**: Test-first development always
+1. **src/ containment**: ALL business logic MUST be inside `src/` folder, NEVER outside
+2. **utils/ pattern**: ALL reusable functions go in `src/utils/`
+3. **settings/ pattern**: ALL configuration MUST be in `src/settings/config.py`
+4. **Centralized config**: Use `app_config` instance from `src.settings.config`
+5. **Minimal main.py**: Entry point only, no business logic
+6. **No unit tests**: Only integration (70%) and e2e (30%) tests
+7. **TDD mandatory**: Test-first development always
 
 ---
 
@@ -103,11 +110,13 @@ from third_party_package import something
 
 from src.utils.logger import logger
 from src.utils.argument_parser import validate_named_flags_only
+from src.settings.config import app_config
 ```
 
 **Rules:**
 - ✅ 3 sections: Native → Third-party → Project files
 - ✅ Blank lines between sections
+- ✅ **CONSISTENT PROJECT IMPORTS**: ALWAYS use `from src.utils.logger import logger` for project imports
 - ✅ **SPECIFIC IMPORTS ONLY**: `from typing import Dict` not `import typing`
 - ✅ **FORBIDDEN GENERAL IMPORTS**: `import sys` → use `from sys import argv as sys_argv`
 - ✅ **ALIAS PATTERN**: `<from>_<import>` → `from sys import argv as sys_argv`
@@ -190,6 +199,56 @@ scli command value           # Will be rejected
 scli --flag value extra      # Will be rejected
 ```
 
+### 6. Configuration Management (MANDATORY)
+```python
+# ✅ CORRECT - Use centralized config
+from src.settings.config import app_config
+
+# Access configuration values
+environment = app_config.environment
+log_level = app_config.log_level
+spinner_enabled = app_config.spinner_enabled
+
+# Check configuration status
+if app_config.is_production():
+    # Production-specific logic
+    pass
+
+# ❌ FORBIDDEN - Direct environment access
+import os
+value = os.environ.get('SOME_VAR')  # DON'T DO THIS
+
+# ❌ FORBIDDEN - Hardcoded values
+MAX_RETRIES = 3  # Should be app_config.max_retries
+```
+
+**Configuration Rules:**
+- ✅ ALL environment variables and config MUST be defined in `src/settings/config.py`
+- ✅ Use `app_config` instance for accessing configuration
+- ✅ Each config field MUST have a default value
+- ✅ Environment variables override defaults (e.g., `LOG_LEVEL` env var → `app_config.log_level`)
+- ✅ Use type annotations for all config fields
+- ✅ Add validation methods using `load_{field_name}` pattern
+- ✅ Import config: `from src.settings.config import app_config`
+- ❌ NEVER access `os.environ` directly in business logic
+- ❌ NEVER hardcode configuration values in code
+- ❌ NEVER create config outside `src/settings/`
+
+**Config Pattern Example:**
+```python
+# In src/settings/config.py
+class AppConfig(BaseSettings):
+    # Field with default value and type annotation
+    max_retries: int = 3  # Can be overridden by MAX_RETRIES env var
+    
+    def load_max_retries(self, current_value: int) -> int:
+        """Validate max_retries is positive."""
+        return max(1, current_value)
+
+# Global instance for import
+app_config = AppConfig()
+```
+
 ---
 
 ## 🔄 Git Workflow & Repository Etiquette
@@ -235,6 +294,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 ### Files Claude CAN Read
 ```
 ✅ src/main.py                 # Entry point
+✅ src/settings/*.py           # Application configuration
 ✅ src/utils/*.py              # All utility modules  
 ✅ tests/integration/*.py      # Integration tests
 ✅ tests/e2e/*.py             # E2E tests
@@ -297,6 +357,8 @@ python tests/run.py --coverage        # With coverage report
 3. **Run tests** - `python tests/run.py` before completing tasks
 4. **Follow TDD** - Write failing test first, then implementation
 5. **Use utils/ pattern** - Move reusable code to utils modules
+6. **Check src/ containment** - ALL business logic must be inside `src/`
+7. **Use app_config** - For any environment variables or configuration
 
 ### When Encountering Errors
 1. **Check logger validation** - Ensure plain strings only
@@ -322,6 +384,8 @@ Before completing any task, verify:
 - [ ] **Imports organized**: 3-section structure (Native → Third-party → Project)
 - [ ] **Logger format**: Plain strings + detail dict only
 - [ ] **Docstrings current**: Match function I/O, include Examples
+- [ ] **src/ containment**: ALL business logic inside `src/` folder
+- [ ] **Configuration centralized**: Use `app_config` from `src.settings.config`
 - [ ] **Utils architecture**: Reusable functions in `src/utils/`
 - [ ] **No print() statements**: Use logger instead
 - [ ] **Named flags only**: CLI arguments validated
