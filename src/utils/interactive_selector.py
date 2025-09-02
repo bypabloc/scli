@@ -93,6 +93,7 @@ def select_command_interactively() -> Optional[str]:
             "commands": commands[:10]  # Primeros 10 para logging
         })
         
+        
         # Modo interactivo con Survey (navegación con flechas + búsqueda)
         if SURVEY_AVAILABLE:
             return _select_with_survey(commands)
@@ -162,6 +163,13 @@ def _select_with_survey(commands: List[str]) -> Optional[str]:
         if selected_option is None:
             logger.info("Selección cancelada por usuario")
             return None
+        
+        # Eliminar solo la línea de Survey sin limpiar toda la pantalla
+        try:
+            # Subir cursor una línea y limpiar esa línea solamente
+            print('\033[1A\033[2K', end='', flush=True)
+        except:
+            pass  # Si falla, no hacer nada para evitar espaciado extra
             
         # Manejar diferentes tipos de respuesta de Survey
         selected_command = None
@@ -250,7 +258,6 @@ def _select_with_rich(commands: List[str]) -> Optional[str]:
         
         header = Panel.fit(header_text, border_style="blue")
         console.print(header)
-        console.print()
         
         # Mostrar comandos disponibles en tabla mejorada con orden
         if filtered_commands:
@@ -273,26 +280,22 @@ def _select_with_rich(commands: List[str]) -> Optional[str]:
             console.print(table)
             
             if len(filtered_commands) > display_count:
-                console.print(f"\n[dim italic]... y {len(filtered_commands) - display_count} comandos más (refine su búsqueda)[/dim]")
+                console.print(f"[dim italic]... y {len(filtered_commands) - display_count} comandos más (refine su búsqueda)[/dim]")
                 
         else:
             console.print("[red]❌ No se encontraron comandos con esa búsqueda[/red]")
             if search_history:
                 console.print("[yellow]💡 Intente con términos más generales[/yellow]")
         
-        console.print()
-        
         # Instrucciones mejoradas
         if filtered_commands:
-            console.print("[dim]💡 Opciones:[/dim]")
+            console.print("\n[dim]💡 Opciones:[/dim]")
             console.print(f"[dim]  • Número (1-{len(filtered_commands)}): Seleccionar comando[/dim]")
             console.print("[dim]  • Texto: Buscar/filtrar comandos por nombre[/dim]")
             console.print("[dim]  • Número de orden: Filtrar por número de orden del comando[/dim]")
             console.print("[dim]  • Enter vacío: Cancelar[/dim]")
         else:
-            console.print("[dim]💡 Escriba texto para buscar comandos o presione Enter para cancelar[/dim]")
-        
-        console.print()
+            console.print("\n[dim]💡 Escriba texto para buscar comandos o presione Enter para cancelar[/dim]")
         
         # Prompt mejorado para selección
         prompt_text = "[bold yellow]🔍 Comando o búsqueda[/bold yellow]"

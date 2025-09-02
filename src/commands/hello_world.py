@@ -40,7 +40,7 @@ class HelloWorldArgs(BaseModel):
         description="Nombre personalizado para el saludo",
         min_length=1,
         max_length=100,
-        examples=["Usuario", "Pablo", "María"]
+        examples=["Usuario", "Pablo"]
     )
 
 

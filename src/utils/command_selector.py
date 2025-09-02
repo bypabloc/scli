@@ -84,7 +84,9 @@ def get_available_commands() -> List[str]:
 
 def _is_valid_command_file(file_path: str, command_name: str) -> bool:
     """
-    Verifica si un archivo contiene una clase de comando válida que hereda de BaseCommand.
+    Verifica si un archivo contiene una clase de comando válida usando análisis estático.
+    
+    Esto evita importaciones innecesarias que generan logs durante el escaneo.
     
     Parameters
     ----------
@@ -96,70 +98,55 @@ def _is_valid_command_file(file_path: str, command_name: str) -> bool:
     Returns
     -------
     bool
-        True si el archivo contiene una clase válida que hereda de BaseCommand, False en caso contrario
+        True si el archivo parece contener una clase válida, False en caso contrario
         
     :Authors:
         - Pablo Contreras
         
     :Created:
         - 2025-08-31
+        
+    :Updated:
+        - 2025-09-01 (Cambio a análisis estático para evitar importaciones innecesarias)
     """
     try:
-        # Importar dinámicamente el comando para verificar que hereda de BaseCommand
-        from src.utils.dynamic_importer import import_command
-        from src.utils.result_types import is_success
-        from src.utils.base_command import BaseCommand
+        # Leer el contenido del archivo
+        with open(file_path, 'r', encoding='utf-8') as file:
+            content = file.read()
         
-        result = import_command(command_name)
-        if not is_success(result):
-            logger.debug("Comando no pudo ser importado", detail={
-                "file": file_path,
-                "command_name": command_name,
-                "error": result.get('error', 'Unknown error')
-            })
-            return False
-            
-        command_class = result['class']
+        # Convertir command_name a class_name esperado (snake_case a PascalCase)
+        expected_class_name = convert_case_style(command_name, "PascalCase")
         
-        # Verificar que hereda de BaseCommand
-        if not issubclass(command_class, BaseCommand):
-            logger.debug("Clase no hereda de BaseCommand", detail={
+        # Verificaciones básicas por análisis de texto (más flexibles)
+        checks = [
+            # 1. Debe importar BaseCommand
+            "from src.utils.base_command import BaseCommand" in content,
+            # 2. Debe tener una clase con el nombre esperado
+            f"class {expected_class_name}" in content,
+            # 3. La clase debe heredar de BaseCommand (flexible con espacios)
+            f"{expected_class_name}(BaseCommand)" in content.replace(" ", "").replace("\n", ""),
+            # 4. Debe tener atributo description
+            "description" in content
+        ]
+        
+        # Todas las verificaciones deben pasar
+        is_valid = all(checks)
+        
+        if not is_valid:
+            logger.debug("Archivo no pasa validaciones estáticas", detail={
                 "file": file_path,
                 "command_name": command_name,
-                "class_name": command_class.__name__,
-                "parent_classes": [cls.__name__ for cls in command_class.__bases__]
+                "expected_class": expected_class_name,
+                "checks_passed": sum(checks),
+                "total_checks": len(checks)
             })
-            return False
             
-        # Intentar crear instancia para validar que tiene description
-        try:
-            instance = command_class()
-            if not hasattr(instance, 'description') or not instance.description.strip():
-                logger.debug("Clase no tiene description válida", detail={
-                    "file": file_path,
-                    "command_name": command_name,
-                    "class_name": command_class.__name__
-                })
-                return False
-        except Exception:
-            logger.critical("Error al crear instancia de comando", detail={
-                "file": file_path,
-                "command_name": command_name,
-                "class_name": command_class.__name__
-            })
-            return False
+        return is_valid
             
-        logger.debug("Comando válido encontrado", detail={
+    except Exception as e:
+        logger.debug("Error al leer archivo de comando", detail={
             "file": file_path,
-            "command_name": command_name,
-            "class_name": command_class.__name__,
-            "has_description": True
-        })
-        return True
-            
-    except Exception:
-        logger.critical("Error al validar archivo de comando", detail={
-            "file": file_path
+            "error": str(e)
         })
         return False
 
